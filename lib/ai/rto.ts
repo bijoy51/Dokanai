@@ -1,4 +1,4 @@
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 import type { Order } from "@/lib/types";
 
 export interface RtoRisk {
@@ -18,7 +18,7 @@ export interface RtoRisk {
  * order size, payment method (COD only).
  */
 function customerHistoryStats(customerId: string) {
-  const past = store.orders.filter(
+  const past = getStore().orders.filter(
     (o) => o.customerId === customerId && (o.status === "delivered" || o.status === "rto")
   );
   const total = past.length;
@@ -47,7 +47,7 @@ const COURIER_RISK: Record<string, number> = {
 };
 
 export function rtoRiskFor(order: Order): RtoRisk {
-  const customer = store.customerById(order.customerId);
+  const customer = getStore().customerById(order.customerId);
   const factors: string[] = [];
 
   let logit = -1.6; // base intercept
@@ -99,7 +99,7 @@ export function rtoRiskFor(order: Order): RtoRisk {
 }
 
 export function pendingCodRisks() {
-  return store.orders
+  return getStore().orders
     .filter((o) => o.status === "pending" && o.paymentMethod === "cod")
     .map(rtoRiskFor)
     .sort((a, b) => b.riskScore - a.riskScore);

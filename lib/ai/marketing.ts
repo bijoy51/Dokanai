@@ -1,5 +1,5 @@
 import { upcomingFestivals } from "@/lib/data/festivals";
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 import { rfmScores } from "./churn";
 import type { Locale } from "@/lib/i18n/messages";
 
@@ -18,7 +18,7 @@ export interface GeneratedMessage {
 }
 
 export function audienceCount(a: Audience): number {
-  if (a === "all") return store.customers.length;
+  if (a === "all") return getStore().customers.length;
   const seg = rfmScores();
   if (a === "vip") return seg.filter((s) => s.segment === "vip").length;
   if (a === "dormant") return seg.filter((s) => s.segment === "dormant").length;

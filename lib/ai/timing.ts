@@ -1,7 +1,7 @@
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 
 /**
- * Best send-hour predictor.
+ * Best-send-hour predictor.
  * Looks at when this customer (and their city cohort) historically order,
  * picks the hour with the highest activity. We don't have hour data on
  * orders — derive it deterministically from customerId + their city's
@@ -23,7 +23,7 @@ export interface TimingSuggestion {
 const URBAN = new Set(["Dhaka", "Chattogram", "Gazipur", "Narayanganj"]);
 
 export function bestSendHour(customerId: string): TimingSuggestion {
-  const c = store.customerById(customerId);
+  const c = getStore().customerById(customerId);
   const seed = hashStr(customerId);
   // Urban cohort tends to engage 8-10pm; semi-urban earlier 7-9pm; with personal jitter.
   const cohortPeak = c && URBAN.has(c.city) ? 21 : 19;

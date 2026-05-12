@@ -1,4 +1,4 @@
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 import { daysBetween } from "@/lib/utils";
 
 export type Segment = "vip" | "loyal" | "atrisk" | "dormant" | "new";
@@ -19,6 +19,7 @@ export interface CustomerScore {
  * combined weighted to assign a segment.
  */
 export function rfmScores(): CustomerScore[] {
+  const store = getStore();
   const today = new Date();
   const out: CustomerScore[] = [];
   for (const c of store.customers) {

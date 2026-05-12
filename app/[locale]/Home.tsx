@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { LangSwitcher } from "@/components/LangSwitcher";
+import { LogoutButton } from "@/components/LogoutButton";
 import { t, type Locale } from "@/lib/i18n/messages";
+import { getSession } from "@/lib/auth";
 import {
   CalendarDays,
   Mic,
   ShieldAlert,
   Sparkles,
   ArrowRight,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 
-export default function Landing({ params }: { params: { locale: string } }) {
+export default function Home({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  const session = getSession();
   const features = [
     { icon: CalendarDays, title: t("landing.feature1", locale), desc: t("landing.feature1.desc", locale) },
     { icon: Mic, title: t("landing.feature2", locale), desc: t("landing.feature2.desc", locale) },
@@ -25,7 +30,17 @@ export default function Landing({ params }: { params: { locale: string } }) {
           <span className="font-semibold">{t("brand.name", locale)}</span>
           <span className="text-xs text-slate-500 hidden sm:inline">· {t("brand.tagline", locale)}</span>
         </div>
-        <LangSwitcher locale={locale} />
+        <div className="flex items-center gap-3">
+          {session && (
+            <>
+              <span className="text-xs text-slate-500 hidden sm:inline">
+                {t("auth.signedInAs", locale)} <span className="font-medium text-slate-700">{session.name}</span>
+              </span>
+              <LogoutButton locale={locale} />
+            </>
+          )}
+          <LangSwitcher locale={locale} />
+        </div>
       </header>
 
       <section className="max-w-4xl mx-auto px-6 pt-12 pb-16 text-center">
@@ -33,14 +48,34 @@ export default function Landing({ params }: { params: { locale: string } }) {
           {t("landing.headline", locale)}
         </h1>
         <p className="mt-5 text-lg text-slate-600 max-w-2xl mx-auto">{t("landing.sub", locale)}</p>
-        <div className="mt-8">
-          <Link
-            href={`/${locale}/dashboard`}
-            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
-          >
-            {t("landing.enter", locale)} <ArrowRight className="w-4 h-4" />
-          </Link>
+        <div className="mt-8 flex items-center justify-center gap-3">
+          {session ? (
+            <Link
+              href={`/${locale}/dashboard`}
+              className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
+            >
+              {t("landing.enter", locale)} <ArrowRight className="w-4 h-4" />
+            </Link>
+          ) : (
+            <>
+              <Link
+                href={`/${locale}/signup`}
+                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
+              >
+                <UserPlus className="w-4 h-4" /> {t("auth.signupCta", locale)}
+              </Link>
+              <Link
+                href={`/${locale}/login`}
+                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-6 py-3 rounded-md font-medium shadow-sm"
+              >
+                <LogIn className="w-4 h-4" /> {t("auth.loginCta", locale)}
+              </Link>
+            </>
+          )}
         </div>
+        {!session && (
+          <p className="mt-3 text-xs text-slate-400">{t("auth.gateNote", locale)}</p>
+        )}
       </section>
 
       <section className="max-w-5xl mx-auto px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-16">

@@ -173,6 +173,27 @@ const en: Dict = {
   "common.loading": "Loading…",
   "common.error": "Something went wrong.",
   "common.viewAll": "View all",
+
+  // auth
+  "auth.loginTitle": "Welcome back",
+  "auth.loginSubtitle": "Log in to your shop dashboard.",
+  "auth.loginCta": "Log in",
+  "auth.signupTitle": "Create your shop",
+  "auth.signupSubtitle": "Sign up and get your own AI dashboard.",
+  "auth.signupCta": "Sign up",
+  "auth.email": "Email",
+  "auth.password": "Password",
+  "auth.passwordPlaceholder": "At least 6 characters",
+  "auth.shopName": "Shop name (optional)",
+  "auth.shopNamePlaceholder": "e.g. Rashida's Boutique",
+  "auth.noAccount": "Don't have an account?",
+  "auth.haveAccount": "Already have an account?",
+  "auth.demoHint": "Try the demo account:",
+  "auth.genericError": "Something went wrong. Please try again.",
+  "auth.signedInAs": "Signed in as",
+  "auth.logout": "Log out",
+  "auth.workspace": "Workspace",
+  "auth.gateNote": "Log in or sign up to access your dashboard.",
 };
 
 const bn: Dict = {
@@ -330,6 +351,27 @@ const bn: Dict = {
   "common.loading": "লোড হচ্ছে…",
   "common.error": "কিছু একটা ভুল হয়েছে।",
   "common.viewAll": "সব দেখুন",
+
+  // auth
+  "auth.loginTitle": "আবার স্বাগতম",
+  "auth.loginSubtitle": "আপনার দোকানের ড্যাশবোর্ডে লগ ইন করুন।",
+  "auth.loginCta": "লগ ইন",
+  "auth.signupTitle": "আপনার দোকান তৈরি করুন",
+  "auth.signupSubtitle": "সাইন আপ করুন এবং নিজের AI ড্যাশবোর্ড পান।",
+  "auth.signupCta": "সাইন আপ",
+  "auth.email": "ইমেইল",
+  "auth.password": "পাসওয়ার্ড",
+  "auth.passwordPlaceholder": "অন্তত ৬ অক্ষর",
+  "auth.shopName": "দোকানের নাম (ঐচ্ছিক)",
+  "auth.shopNamePlaceholder": "যেমন: রাশিদার বুটিক",
+  "auth.noAccount": "অ্যাকাউন্ট নেই?",
+  "auth.haveAccount": "অ্যাকাউন্ট আছে?",
+  "auth.demoHint": "ডেমো অ্যাকাউন্ট ব্যবহার করুন:",
+  "auth.genericError": "কিছু একটা ভুল হয়েছে। আবার চেষ্টা করুন।",
+  "auth.signedInAs": "লগ ইন করেছেন",
+  "auth.logout": "লগ আউট",
+  "auth.workspace": "ওয়ার্কস্পেস",
+  "auth.gateNote": "ড্যাশবোর্ড দেখতে লগ ইন বা সাইন আপ করুন।",
 };
 
 const dictionaries: Record<Locale, Dict> = { en, bn };

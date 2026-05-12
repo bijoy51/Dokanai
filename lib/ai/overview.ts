@@ -1,5 +1,4 @@
-import { store } from "@/lib/data/store";
-import { daysBetween } from "@/lib/utils";
+import { getStore } from "@/lib/data/store";
 
 export interface OverviewMetrics {
   revenue30: number;
@@ -14,6 +13,7 @@ export interface OverviewMetrics {
 }
 
 export function computeOverview(): OverviewMetrics {
+  const store = getStore();
   const today = new Date();
   const cutoff30 = new Date(today);
   cutoff30.setDate(today.getDate() - 30);
@@ -76,6 +76,7 @@ export function computeOverview(): OverviewMetrics {
 }
 
 export function recentOrders(limit = 10) {
+  const store = getStore();
   return [...store.orders]
     .sort((a, b) => (a.date < b.date ? 1 : -1))
     .slice(0, limit)
@@ -87,6 +88,3 @@ export function recentOrders(limit = 10) {
       date: o.date,
     }));
 }
-
-// keep linter happy if tree-shaken
-export const _ = daysBetween;

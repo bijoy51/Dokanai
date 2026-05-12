@@ -1,4 +1,4 @@
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 import { festivalBoost, upcomingFestivals } from "@/lib/data/festivals";
 import type { Product } from "@/lib/types";
 
@@ -18,6 +18,7 @@ export interface ProductForecast {
 
 /** Aggregate historical daily units sold per product. */
 function unitsSoldByDay(productId: string): Map<string, number> {
+  const store = getStore();
   const m = new Map<string, number>();
   for (const o of store.orders) {
     if (o.status === "rto" || o.status === "cancelled") continue;
@@ -84,10 +85,11 @@ export function forecastProduct(p: Product): ProductForecast {
 }
 
 export function forecastAll(): ProductForecast[] {
-  return store.products.map(forecastProduct);
+  return getStore().products.map(forecastProduct);
 }
 
 export function dailyForecastTotal(): { date: string; units: number }[] {
+  const store = getStore();
   const today = new Date();
   const days: { date: string; units: number }[] = [];
 

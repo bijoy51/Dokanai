@@ -1,4 +1,4 @@
-import { store } from "@/lib/data/store";
+import { getStore } from "@/lib/data/store";
 import { forecastProduct } from "./forecast";
 import type { Product } from "@/lib/types";
 
@@ -18,6 +18,7 @@ export interface PriceRec {
 
 /** Suggest price changes from demand signals + stock health. */
 export function priceRecommendations(): PriceRec[] {
+  const store = getStore();
   const recs: PriceRec[] = [];
   for (const p of store.products) {
     const f = forecastProduct(p);
@@ -82,6 +83,7 @@ export interface BundleRec {
 }
 
 export function bundleRecommendations(limit = 8): BundleRec[] {
+  const store = getStore();
   // co-occurrence map
   const pairs = new Map<string, number>();
   for (const o of store.orders) {

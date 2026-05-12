@@ -8,7 +8,13 @@ import type {
 } from "@/lib/types";
 import { festivalBoost } from "./festivals";
 
-// Deterministic PRNG so seeds are stable across server restarts
+export interface Dataset {
+  products: Product[];
+  customers: Customer[];
+  orders: Order[];
+}
+
+// Deterministic PRNG so a given seed always produces the same dataset.
 function mulberry32(seed: number) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -18,11 +24,7 @@ function mulberry32(seed: number) {
   };
 }
 
-const rng = mulberry32(20260612);
-const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)];
-const range = (a: number, b: number) => Math.floor(rng() * (b - a + 1)) + a;
-
-// === Products ===
+// === Product catalog (shared shape; stock varies per dataset) ===
 const PRODUCT_TEMPLATES: Array<Omit<Product, "id" | "stock">> = [
   // Clothing
   { name: "Cotton Saree", nameBn: "সুতি শাড়ি", category: "clothing", price: 1850, cost: 1100, tags: ["festive", "women"] },
@@ -71,13 +73,6 @@ const PRODUCT_TEMPLATES: Array<Omit<Product, "id" | "stock">> = [
   { name: "Prayer Mat", nameBn: "জায়নামাজ", category: "home", price: 420, cost: 230, tags: ["ramadan"] },
 ];
 
-export const PRODUCTS: Product[] = PRODUCT_TEMPLATES.map((p, i) => ({
-  id: `p${(i + 1).toString().padStart(3, "0")}`,
-  ...p,
-  stock: range(8, 120),
-}));
-
-// === Customers ===
 const FIRST_NAMES = [
   "Rashida", "Karim", "Ayesha", "Tanvir", "Nusrat", "Sakib", "Farzana",
   "Imran", "Sumaiya", "Rakib", "Mahfuza", "Arif", "Sabrina", "Hasan",
@@ -88,78 +83,79 @@ const FIRST_NAMES = [
 const LAST_NAMES = ["Begum", "Khan", "Ahmed", "Rahman", "Hossain", "Islam", "Haque", "Akter", "Chowdhury", "Karim"];
 const CITIES = ["Dhaka", "Chattogram", "Khulna", "Sylhet", "Rajshahi", "Barishal", "Cumilla", "Mymensingh", "Narayanganj", "Gazipur"];
 
-export const CUSTOMERS: Customer[] = Array.from({ length: 220 }, (_, i) => {
-  const joinedDaysAgo = range(7, 220);
-  const join = new Date();
-  join.setDate(join.getDate() - joinedDaysAgo);
-  return {
-    id: `c${(i + 1).toString().padStart(4, "0")}`,
-    name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
-    phone: `+8801${range(3, 9)}${range(10000000, 99999999)}`,
-    city: pick(CITIES),
-    joinedAt: join.toISOString().slice(0, 10),
-    preferredLang: rng() < 0.7 ? "bn" : "en",
-  };
-});
+/**
+ * Build a complete demo dataset (products, customers, ~6 months of orders)
+ * from a numeric seed. Same seed -> same data, so every account gets a
+ * stable but distinct dataset.
+ */
+export function generateDataset(seedNum: number): Dataset {
+  const rng = mulberry32(seedNum >>> 0 || 1);
+  const pick = <T,>(arr: T[]) => arr[Math.floor(rng() * arr.length)];
+  const range = (a: number, b: number) => Math.floor(rng() * (b - a + 1)) + a;
 
-// Each customer has a "lifecycle" — they go dormant after a certain
-// number of days. Most customers are still active, ~25% have churned.
-const customerLifecycle = new Map<string, { activeFromDayIdx: number; activeToDayIdx: number }>();
-for (const c of CUSTOMERS) {
-  const r = rng();
-  const totalSpan = 180;
-  // 25% churn — last activity 60..160 days ago
-  // 15% recent dropoff — last activity 35..70 days ago
-  // 60% still active — last activity within 0..14 days ago
-  let inactiveDaysAgo: number;
-  if (r < 0.25) inactiveDaysAgo = 60 + Math.floor(rng() * 100);
-  else if (r < 0.40) inactiveDaysAgo = 35 + Math.floor(rng() * 35);
-  else inactiveDaysAgo = Math.floor(rng() * 14);
-  const startDayIdx = Math.floor(rng() * 60); // joined within the first 60 days of seed window
-  customerLifecycle.set(c.id, {
-    activeFromDayIdx: startDayIdx,
-    activeToDayIdx: totalSpan - inactiveDaysAgo,
+  // Products
+  const products: Product[] = PRODUCT_TEMPLATES.map((p, i) => ({
+    id: `p${(i + 1).toString().padStart(3, "0")}`,
+    ...p,
+    stock: range(8, 120),
+  }));
+
+  // Customers
+  const customers: Customer[] = Array.from({ length: 220 }, (_, i) => {
+    const joinedDaysAgo = range(7, 220);
+    const join = new Date();
+    join.setDate(join.getDate() - joinedDaysAgo);
+    return {
+      id: `c${(i + 1).toString().padStart(4, "0")}`,
+      name: `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`,
+      phone: `+8801${range(3, 9)}${range(10000000, 99999999)}`,
+      city: pick(CITIES),
+      joinedAt: join.toISOString().slice(0, 10),
+      preferredLang: rng() < 0.7 ? "bn" : "en",
+    };
   });
-}
 
-// === Orders ===
-// Generate ~6 months of orders, with festival-driven demand spikes.
-function generateOrders(): Order[] {
+  // Customer lifecycle: ~25% churned, ~15% recent dropoff, ~60% active.
+  const lifecycle = new Map<string, { from: number; to: number }>();
+  const totalSpan = 180;
+  for (const c of customers) {
+    const r = rng();
+    let inactiveDaysAgo: number;
+    if (r < 0.25) inactiveDaysAgo = 60 + Math.floor(rng() * 100);
+    else if (r < 0.4) inactiveDaysAgo = 35 + Math.floor(rng() * 35);
+    else inactiveDaysAgo = Math.floor(rng() * 14);
+    lifecycle.set(c.id, { from: Math.floor(rng() * 60), to: totalSpan - inactiveDaysAgo });
+  }
+
+  // Orders
   const orders: Order[] = [];
   const today = new Date();
-  // start ~180 days ago
   const start = new Date(today);
-  start.setDate(start.getDate() - 180);
-
+  start.setDate(start.getDate() - totalSpan);
   let counter = 1;
 
-  for (let d = 0; d <= 180; d++) {
+  for (let d = 0; d <= totalSpan; d++) {
     const date = new Date(start);
     date.setDate(start.getDate() + d);
     const dateStr = date.toISOString().slice(0, 10);
 
-    // Compute average daily order count, scaled by festival boost
-    let avgOrders = 8; // baseline
-    // weekend lift
+    let avgOrders = 8;
     const dow = date.getDay();
     if (dow === 5 || dow === 6) avgOrders *= 1.25;
-    // monthly seasonality
     avgOrders *= 1 + 0.15 * Math.sin((d / 30) * Math.PI);
 
-    // figure dominant festival boost across categories
     let maxBoost = 1;
     for (const cat of ["clothing", "beauty", "food", "home", "electronics"] as ProductCategory[]) {
       const { boost } = festivalBoost(date, cat);
       if (boost > maxBoost) maxBoost = boost;
     }
-    avgOrders *= 0.5 + 0.5 * maxBoost; // soften so baseline isn't drowned
+    avgOrders *= 0.5 + 0.5 * maxBoost;
 
     const dailyCount = Math.max(1, Math.round(avgOrders + (rng() - 0.5) * avgOrders * 0.4));
 
-    // Eligible customers for this day = those whose lifecycle covers this day index
-    const eligible = CUSTOMERS.filter((c) => {
-      const lc = customerLifecycle.get(c.id)!;
-      return d >= lc.activeFromDayIdx && d <= lc.activeToDayIdx;
+    const eligible = customers.filter((c) => {
+      const lc = lifecycle.get(c.id)!;
+      return d >= lc.from && d <= lc.to;
     });
     if (eligible.length === 0) continue;
 
@@ -170,8 +166,7 @@ function generateOrders(): Order[] {
       const items: OrderItem[] = [];
       const usedProducts = new Set<string>();
       for (let j = 0; j < itemCount; j++) {
-        // weighted product selection: festival categories more likely
-        const candidates = PRODUCTS.filter((p) => !usedProducts.has(p.id));
+        const candidates = products.filter((p) => !usedProducts.has(p.id));
         const weights = candidates.map((p) => festivalBoost(date, p.category).boost);
         const totalW = weights.reduce((a, b) => a + b, 0);
         let r = rng() * totalW;
@@ -192,21 +187,15 @@ function generateOrders(): Order[] {
       const paymentMethod: Order["paymentMethod"] =
         paymentRoll < 0.55 ? "cod" : paymentRoll < 0.85 ? "bkash" : paymentRoll < 0.95 ? "nagad" : "card";
 
-      // RTO mostly happens for COD orders, weighted by city + courier
       const isCod = paymentMethod === "cod";
       const cityRiskBase = ["Dhaka", "Chattogram", "Gazipur"].includes(customer.city) ? 0.15 : 0.32;
       const rtoChance = isCod ? cityRiskBase + (total > 3000 ? 0.08 : 0) : 0.02;
 
       let status: DeliveryStatus = "delivered";
-      const today0 = new Date();
-      const daysFromToday = Math.floor((today0.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysFromToday < 3) {
-        status = "pending";
-      } else if (rng() < rtoChance) {
-        status = "rto";
-      } else if (rng() < 0.01) {
-        status = "cancelled";
-      }
+      const daysFromToday = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      if (daysFromToday < 3) status = "pending";
+      else if (rng() < rtoChance) status = "rto";
+      else if (rng() < 0.01) status = "cancelled";
 
       orders.push({
         id: `o${counter.toString().padStart(5, "0")}`,
@@ -223,7 +212,5 @@ function generateOrders(): Order[] {
     }
   }
 
-  return orders;
+  return { products, customers, orders };
 }
-
-export const ORDERS: Order[] = generateOrders();

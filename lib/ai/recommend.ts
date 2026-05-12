@@ -1,15 +1,17 @@
-import { store } from "@/lib/data/store";
+import { getStore, type Store } from "@/lib/data/store";
 import type { Product } from "@/lib/types";
 
 /**
- * Item-item collaborative filtering with cosine similarity.
- * Builds product vectors over customers (binary), computes similarity, ranks.
+ * Item-to-item collaborative filtering with cosine similarity.
+ * Builds product vectors over customers (binary purchased), computes
+ * pairwise similarity, ranks. Memoized per account store.
  */
 
-let cachedSim: Map<string, Map<string, number>> | null = null;
+type SimMatrix = Map<string, Map<string, number>>;
 
-function buildSimilarity(): Map<string, Map<string, number>> {
-  if (cachedSim) return cachedSim;
+function buildSimilarity(store: Store): SimMatrix {
+  const cached = store._cache.get("sim") as SimMatrix | undefined;
+  if (cached) return cached;
 
   // Customer vectors per product (binary purchased)
   const buyers = new Map<string, Set<string>>();
@@ -21,7 +23,7 @@ function buildSimilarity(): Map<string, Map<string, number>> {
     }
   }
 
-  const sim = new Map<string, Map<string, number>>();
+  const sim: SimMatrix = new Map();
   const ids = [...buyers.keys()];
   for (let i = 0; i < ids.length; i++) {
     const a = ids[i];
@@ -31,7 +33,6 @@ function buildSimilarity(): Map<string, Map<string, number>> {
       const b = ids[j];
       const B = buyers.get(b)!;
       let inter = 0;
-      // small sets — direct intersection
       for (const x of A) if (B.has(x)) inter++;
       if (inter === 0) continue;
       const cos = inter / Math.sqrt(A.size * B.size);
@@ -40,7 +41,7 @@ function buildSimilarity(): Map<string, Map<string, number>> {
       sim.get(b)!.set(a, cos);
     }
   }
-  cachedSim = sim;
+  store._cache.set("sim", sim);
   return sim;
 }
 
@@ -54,6 +55,7 @@ export interface CustomerSummary {
 }
 
 export function customerSummaries(limit = 60): CustomerSummary[] {
+  const store = getStore();
   const map = new Map<string, { count: number; total: number; last: string | null }>();
   for (const o of store.orders) {
     if (o.status === "rto" || o.status === "cancelled") continue;
@@ -87,7 +89,8 @@ export interface Recommendation {
 }
 
 export function recommendForCustomer(customerId: string, k = 6): Recommendation[] {
-  const sim = buildSimilarity();
+  const store = getStore();
+  const sim = buildSimilarity(store);
   const purchased = new Set<string>();
   for (const o of store.orders.filter((o) => o.customerId === customerId)) {
     for (const it of o.items) purchased.add(it.productId);
@@ -115,9 +118,9 @@ export function recommendForCustomer(customerId: string, k = 6): Recommendation[
       };
     });
 
-  // If history too sparse, fall back to category-popularity
+  // If history too sparse, fall back to category popularity
   if (ranked.length < k) {
-    const popular = popularByCategory(purchased);
+    const popular = popularByCategory(store, purchased);
     for (const r of popular) {
       if (ranked.find((x) => x.product.id === r.product.id)) continue;
       ranked.push(r);
@@ -128,7 +131,7 @@ export function recommendForCustomer(customerId: string, k = 6): Recommendation[
   return ranked;
 }
 
-function popularByCategory(exclude: Set<string>): Recommendation[] {
+function popularByCategory(store: Store, exclude: Set<string>): Recommendation[] {
   const counts = new Map<string, number>();
   for (const o of store.orders) {
     for (const it of o.items) counts.set(it.productId, (counts.get(it.productId) ?? 0) + it.qty);
@@ -141,6 +144,7 @@ function popularByCategory(exclude: Set<string>): Recommendation[] {
 }
 
 export function purchaseHistory(customerId: string) {
+  const store = getStore();
   const orders = store.orders.filter((o) => o.customerId === customerId).sort((a, b) => (a.date < b.date ? 1 : -1));
   const items = orders.flatMap((o) =>
     o.items.map((i) => ({
