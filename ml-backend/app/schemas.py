@@ -154,3 +154,4 @@ class HealthResponse(BaseModel):
     version: str
     models_loaded: List[str]
     models_missing: List[str]
+    model_versions: dict = {}  # {model_name: artifact_filename or "heuristic"}

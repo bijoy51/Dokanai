@@ -3,6 +3,7 @@ import { LangSwitcher } from "./LangSwitcher";
 import { LogoutButton } from "./LogoutButton";
 import { t, type Locale } from "@/lib/i18n/messages";
 import {
+  BarChart3,
   LayoutDashboard,
   TrendingUp,
   Tag,
@@ -16,6 +17,7 @@ import {
 
 const links = [
   { key: "nav.overview", href: "/dashboard", icon: LayoutDashboard },
+  { key: "nav.analyze", href: "/dashboard/analyze", icon: BarChart3 },
   { key: "nav.forecast", href: "/dashboard/forecast", icon: TrendingUp },
   { key: "nav.pricing", href: "/dashboard/pricing", icon: Tag },
   { key: "nav.recommendations", href: "/dashboard/recommendations", icon: Sparkles },

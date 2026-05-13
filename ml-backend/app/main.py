@@ -49,14 +49,37 @@ def _startup() -> None:
 
 # ---------- public routes ----------
 
+_ARTIFACT_FILES = {
+    "shop_type": ["shop_type_clf.joblib", "shop_type_clf.onnx"],
+    "attributes": ["attribute_extractor", "attr_ner.onnx"],
+    "forecaster": ["demand_forecaster.json"],
+    "festival": ["festival_uplift.json"],
+    "catalog_gap": ["catalog_gap_rules.pkl"],
+    "trends": ["trends_cache.json"],
+    "fashion_style": ["fashion_style_clf.onnx"],
+}
+
+
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     loaded, missing = pipeline.loaded_status()
+    versions: dict = {}
+    for name, files in _ARTIFACT_FILES.items():
+        match = next((f for f in files if (ARTIFACTS_DIR / f).exists()), None)
+        if match:
+            try:
+                ts = (ARTIFACTS_DIR / match).stat().st_mtime
+                versions[name] = f"{match}@{int(ts)}"
+            except OSError:
+                versions[name] = match
+        else:
+            versions[name] = "heuristic"
     return HealthResponse(
         status="ok",
         version=APP_VERSION,
         models_loaded=loaded,
         models_missing=missing,
+        model_versions=versions,
     )
 
 
