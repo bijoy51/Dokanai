@@ -1,0 +1,263 @@
+{
+  "beauty": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "hair oil",
+        "momentum": -0.28
+      },
+      {
+        "product_type": "moisturizer",
+        "momentum": -0.27
+      },
+      {
+        "product_type": "face serum",
+        "momentum": -0.26
+      },
+      {
+        "product_type": "lipstick",
+        "momentum": -0.23
+      },
+      {
+        "product_type": "henna cone",
+        "momentum": -0.21
+      },
+      {
+        "product_type": "attar perfume",
+        "momentum": -0.19
+      },
+      {
+        "product_type": "compact powder",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "nail polish",
+        "momentum": -0.16
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "clothing": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "graphic t-shirt",
+        "momentum": -0.35
+      },
+      {
+        "product_type": "cotton three-piece",
+        "momentum": -0.33
+      },
+      {
+        "product_type": "salwar set",
+        "momentum": -0.29
+      },
+      {
+        "product_type": "formal trouser",
+        "momentum": -0.27
+      },
+      {
+        "product_type": "winter jacket",
+        "momentum": -0.25
+      },
+      {
+        "product_type": "designer panjabi",
+        "momentum": -0.25
+      },
+      {
+        "product_type": "woolen shawl",
+        "momentum": -0.24
+      },
+      {
+        "product_type": "bridal lehenga",
+        "momentum": -0.23
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "electronics": {
+    "up": [
+      {
+        "product_type": "bluetooth earbuds",
+        "momentum": 0.14
+      },
+      {
+        "product_type": "phone case",
+        "momentum": 0.11
+      }
+    ],
+    "down": [
+      {
+        "product_type": "speaker",
+        "momentum": -0.12
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "food": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "sweet box",
+        "momentum": -0.24
+      },
+      {
+        "product_type": "honey 500g",
+        "momentum": -0.22
+      },
+      {
+        "product_type": "premium dates 1kg",
+        "momentum": -0.21
+      },
+      {
+        "product_type": "spice mix pack",
+        "momentum": -0.21
+      },
+      {
+        "product_type": "chickpea 1kg",
+        "momentum": -0.19
+      },
+      {
+        "product_type": "iftar snack box",
+        "momentum": -0.19
+      },
+      {
+        "product_type": "premium tea 500g",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "hilsa fish 1kg",
+        "momentum": -0.14
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "grocery": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "biscuit pack",
+        "momentum": -0.29
+      },
+      {
+        "product_type": "onion 1kg",
+        "momentum": -0.26
+      },
+      {
+        "product_type": "masoor dal 1kg",
+        "momentum": -0.25
+      },
+      {
+        "product_type": "egg dozen",
+        "momentum": -0.24
+      },
+      {
+        "product_type": "powder milk 500g",
+        "momentum": -0.23
+      },
+      {
+        "product_type": "potato 1kg",
+        "momentum": -0.22
+      },
+      {
+        "product_type": "instant noodles",
+        "momentum": -0.22
+      },
+      {
+        "product_type": "sugar 1kg",
+        "momentum": -0.21
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "home": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "pillow pack",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "doormat",
+        "momentum": -0.12
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "pharmacy": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "hand sanitizer",
+        "momentum": -0.26
+      },
+      {
+        "product_type": "blood pressure monitor",
+        "momentum": -0.25
+      },
+      {
+        "product_type": "vitamin tablets",
+        "momentum": -0.23
+      },
+      {
+        "product_type": "thermometer",
+        "momentum": -0.22
+      },
+      {
+        "product_type": "paracetamol",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "antiseptic liquid",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "face mask",
+        "momentum": -0.17
+      },
+      {
+        "product_type": "bandage roll",
+        "momentum": -0.15
+      }
+    ],
+    "as_of": "2026-05-13"
+  },
+  "stationery": {
+    "up": [],
+    "down": [
+      {
+        "product_type": "file folder",
+        "momentum": -0.26
+      },
+      {
+        "product_type": "exercise book",
+        "momentum": -0.25
+      },
+      {
+        "product_type": "ball pen pack",
+        "momentum": -0.23
+      },
+      {
+        "product_type": "eraser",
+        "momentum": -0.21
+      },
+      {
+        "product_type": "color box",
+        "momentum": -0.19
+      },
+      {
+        "product_type": "marker",
+        "momentum": -0.18
+      },
+      {
+        "product_type": "glue stick",
+        "momentum": -0.14
+      },
+      {
+        "product_type": "calculator",
+        "momentum": -0.13
+      }
+    ],
+    "as_of": "2026-05-13"
+  }
+}

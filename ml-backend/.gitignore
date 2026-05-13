@@ -1,0 +1,19 @@
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+.env
+.env.*
+
+# Generated / downloaded data (regenerate from training/)
+datasets/raw/
+datasets/processed/
+datasets/synthetic/
+
+# Trained artifacts are large; ship them via git-lfs or the bucket, not normal git.
+artifacts/*.onnx
+artifacts/*.joblib
+artifacts/*.pkl
+artifacts/*.faiss
+artifacts/image_library/
