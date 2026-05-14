@@ -5,15 +5,14 @@ __pycache__
 venv
 .env
 .env.*
+.vercel
 
 # Generated / downloaded data (regenerate from training/)
 datasets/raw/
 datasets/processed/
 datasets/synthetic/
 
-# Trained artifacts are large; ship them via git-lfs or the bucket, not normal git.
-artifacts/*.onnx
-artifacts/*.joblib
-artifacts/*.pkl
-artifacts/*.faiss
-artifacts/image_library/
+# Training-time cache (large + recomputable)
+artifacts/_embeddings_cache.npz
+
+.vercel

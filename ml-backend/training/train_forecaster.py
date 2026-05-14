@@ -49,9 +49,11 @@ def build_features(sales: pd.DataFrame) -> pd.DataFrame:
     grp = daily.groupby(["shop_id", "product_type"])
     for lag in (1, 7, 14, 28):
         daily[f"lag_{lag}"] = grp["y"].shift(lag)
-    daily["roll7_mean"] = grp["y"].shift(1).rolling(7).mean().reset_index(level=[0, 1], drop=True)
-    daily["roll28_mean"] = grp["y"].shift(1).rolling(28).mean().reset_index(level=[0, 1], drop=True)
-    daily["roll7_std"] = grp["y"].shift(1).rolling(7).std().reset_index(level=[0, 1], drop=True)
+    # Use transform so the result aligns with the original index regardless of
+    # pandas version (older versions return a multi-index from shift+rolling).
+    daily["roll7_mean"] = grp["y"].transform(lambda s: s.shift(1).rolling(7).mean())
+    daily["roll28_mean"] = grp["y"].transform(lambda s: s.shift(1).rolling(28).mean())
+    daily["roll7_std"] = grp["y"].transform(lambda s: s.shift(1).rolling(7).std())
 
     daily["dow"] = daily["date"].dt.dayofweek
     daily["month"] = daily["date"].dt.month

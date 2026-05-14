@@ -1,12 +1,14 @@
-# Runtime (inference + lightweight training)
+# Inference runtime for the full ML backend. Designed for hosts with
+# >=1 GB ephemeral storage at install time (Hugging Face Spaces, Render,
+# Railway, Fly.io). Vercel serverless cannot fit this because its
+# AWS Lambda layer caps ephemeral storage at 500 MB and sklearn+scipy
+# alone needs roughly 360 MB during install.
 fastapi==0.115.0
-uvicorn[standard]==0.30.6
+uvicorn==0.30.6
 pydantic==2.9.2
-pandas==2.2.2
 numpy==1.26.4
 scikit-learn==1.5.1
 xgboost==2.1.1
 joblib==1.4.2
 onnxruntime==1.18.1
 Pillow==10.4.0
-openpyxl==3.1.5

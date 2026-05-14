@@ -1,0 +1,21 @@
+# Things Vercel must not bundle into the function.
+training/
+datasets/
+*.md
+.git/
+.github/
+__pycache__
+.pytest_cache
+.venv
+venv
+requirements-train.txt
+Dockerfile
+.dockerignore
+
+# Fashion-vision artifact: not used in the Vercel deployment since
+# onnxruntime isn't in the slim requirements.
+artifacts/fashion_style_clf.onnx
+artifacts/style_labels.json
+artifacts/image_library/
+artifacts/image_library_index.json
+artifacts/_embeddings_cache.npz

@@ -64,19 +64,35 @@ The synthetic generator already covers everything Phase 1 needs, so the public d
 
 ## Deployment
 
-The backend is a stock Docker image — pick any host that runs containers:
+The backend is a stock Docker image — pick any host that runs containers.
 
-- **Render**: New Web Service → "Existing Dockerfile" → set `ALLOWED_ORIGINS=https://dokanai.vercel.app` and (optional) `ADMIN_SECRET`. 512 MB RAM tier is enough for Phase 1; bump for Phase 2.
-- **Hugging Face Spaces**: SDK = "Docker", upload the same Dockerfile.
-- **Railway / Fly.io**: same flow.
+**Important: don't try to put this on Vercel's serverless runtime.** Vercel's AWS Lambda layer caps ephemeral storage at 500 MB and the inference stack (scikit-learn + scipy + xgboost + onnxruntime + Pillow) needs ~860 MB at install time. Use a real container host instead.
 
-In the Next.js frontend, set `ML_BACKEND_URL` to the deployed URL; the app will call it from a server route. CORS on the backend should allow only the Vercel domain in production.
+### Hugging Face Spaces (recommended; fastest free path)
+
+1. Sign in at https://huggingface.co and click **New Space**.
+2. Owner = you · Name = `dokanai-ml` · Space SDK = **Docker** · Visibility = Public · Hardware = CPU basic (free).
+3. After creation, the Space gives you a `git remote add space …` command. Add it to this `ml-backend/` folder and `git push space main`. The Space builds from `Dockerfile`.
+4. In the Space's *Settings → Repository secrets*: add `ALLOWED_ORIGINS=https://dokanai.vercel.app` and (optional) `ADMIN_SECRET=<random>`.
+5. The public URL is `https://<your-username>-dokanai-ml.hf.space`.
+
+### Render
+
+1. Sign in at https://render.com → **New Web Service** → connect this repo.
+2. Root directory: `ml-backend`. Environment: **Docker**. Plan: free tier is fine for Phase 1; bump for Phase 2.
+3. Env vars: same as above.
+
+### Railway / Fly.io
+
+Same flow; both auto-detect the Dockerfile.
+
+### Wiring it into the Next.js app
+
+Once you have the backend URL, set `ML_BACKEND_URL=https://<your-backend-host>` in the Vercel project settings (Environment Variables → Production). Redeploy the frontend. The Analyze page will switch from the heuristic banner to "Powered by the trained ML backend" on the next request.
 
 ## How the artifacts ship
 
-For Phase 1, the trained files are small (<10 MB total) — commit them via **git-lfs** or attach to a **GitHub release** that the Dockerfile pulls during build.
-
-For Phase 2, the fashion ONNX + image library are larger (~50–200 MB) — keep them in a cloud bucket (Cloudflare R2 / Hugging Face Hub / S3) and pull them at container startup. Set `ARTIFACTS_DIR` to the mounted path.
+All trained artifacts (5 Phase 1 models + the 16 MB fashion ONNX + 130-image library) total ~17 MB and are **committed directly to the repo** under `artifacts/`. No git-lfs and no separate bucket needed. The Dockerfile copies them into the image at build time. To re-train, run the training scripts and commit the new files.
 
 ## Folder map
 

@@ -1,7 +1,11 @@
-# Extra dependencies only needed to train the Fashion Style model (Phase 2).
-# Heavy (a few GB). Install in your Colab notebook, not on the production backend.
+# Training-only dependencies. Install in your Colab notebook /
+# local training environment, NOT on the production backend.
 -r requirements.txt
-torch>=2.2
-torchvision>=0.17
-faiss-cpu>=1.7.4
-spacy>=3.7  # optional, for the attribute-extractor NER model
+pandas==2.2.2
+openpyxl==3.1.5
+torch>=2.2  --index-url https://download.pytorch.org/whl/cpu
+torchvision>=0.17  --index-url https://download.pytorch.org/whl/cpu
+datasets>=2.14
+onnxscript>=0.1
+spacy>=3.7  ; python_version < "3.13"
+faiss-cpu>=1.7.4  ; sys_platform != "win32"
