@@ -57,10 +57,13 @@ export async function POST(req: Request) {
     images: body.images ?? [],
   };
 
-  const backend = process.env.ML_BACKEND_URL;
+  const backend = process.env.ML_BACKEND_URL?.trim();
   if (backend) {
+    // Strip any whitespace + trailing slashes (the env var sometimes ends up
+    // with a trailing newline from shell-piped values).
+    const base = backend.replace(/\s+/g, "").replace(/\/+$/, "");
     try {
-      const upstream = await fetch(`${backend.replace(/\/+$/, "")}/analyze-shop`, {
+      const upstream = await fetch(`${base}/analyze-shop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -73,6 +76,10 @@ export async function POST(req: Request) {
         stub.notes.unshift(`Backend returned ${upstream.status}; using fallback.`);
         return NextResponse.json(stub);
       }
+      // The backend returns relative /images/<file>.jpg paths for sample
+      // images. Rewrite them to absolute URLs so the browser fetches them
+      // from the ML backend host instead of the Vercel domain.
+      rewriteImageUrls(json, base);
       return NextResponse.json(json);
     } catch (err) {
       const stub = analyzeShopStub(payload);
@@ -84,4 +91,16 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json(analyzeShopStub(payload));
+}
+
+function rewriteImageUrls(resp: AnalyzeShopResponse, base: string): void {
+  const fix = (u: string): string =>
+    u && u.startsWith("/") ? `${base}${u}` : u;
+  if (Array.isArray(resp.popular_styles)) {
+    for (const s of resp.popular_styles) {
+      if (Array.isArray(s.sample_images)) {
+        s.sample_images = s.sample_images.map(fix);
+      }
+    }
+  }
 }

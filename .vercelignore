@@ -1,0 +1,15 @@
+# The Python ML backend lives in this repo for convenience but it is
+# deployed separately to Hugging Face Spaces — it must not be uploaded to
+# the Vercel deployment of the Next.js app.
+ml-backend/
+
+# Build outputs
+.next/
+
+# Node modules are restored by Vercel from the lockfile.
+node_modules/
+
+# Local files
+.env
+.env.local
+*.log

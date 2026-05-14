@@ -13,30 +13,32 @@ from typing import List, Optional
 
 from ..settings import ARTIFACTS_DIR
 
-# Curated popular styles per season bucket, used when the vision model is absent.
+# Curated popular styles per season bucket. `library_key` maps each entry to
+# the matching class in artifacts/image_library_index.json so the real
+# photos can be retrieved at request time.
 STYLE_BANK = {
     "ramadan_eid": [
-        {"label": "Embroidered three-piece", "emoji": "👗", "momentum": 0.31, "note": "top seller in clothing shops before Eid"},
-        {"label": "Pastel cotton saree", "emoji": "🥻", "momentum": 0.26, "note": "rising demand for light festive looks"},
-        {"label": "Designer panjabi", "emoji": "👔", "momentum": 0.24, "note": "men's Eid staple"},
-        {"label": "Kids Eid frock", "emoji": "👶", "momentum": 0.2, "note": "high-volume seasonal line"},
-        {"label": "Anarkali kurti", "emoji": "👚", "momentum": 0.18, "note": "popular semi-formal option"},
+        {"label": "Embroidered three-piece", "library_key": "Kurta Sets", "emoji": "👗", "momentum": 0.31, "note": "top seller in clothing shops before Eid"},
+        {"label": "Pastel cotton saree", "library_key": "Sarees", "emoji": "🥻", "momentum": 0.26, "note": "rising demand for light festive looks"},
+        {"label": "Designer panjabi", "library_key": "Kurtas", "emoji": "👔", "momentum": 0.24, "note": "men's Eid staple"},
+        {"label": "Kids Eid frock", "library_key": "Dresses", "emoji": "👶", "momentum": 0.2, "note": "high-volume seasonal line"},
+        {"label": "Anarkali kurti", "library_key": "Kurtis", "emoji": "👚", "momentum": 0.18, "note": "popular semi-formal option"},
     ],
     "boishakh": [
-        {"label": "Red-and-white saree", "emoji": "🥻", "momentum": 0.3, "note": "the Pohela Boishakh signature look"},
-        {"label": "White cotton panjabi", "emoji": "👔", "momentum": 0.22, "note": "men's Boishakh staple"},
-        {"label": "Block-print kurti", "emoji": "👚", "momentum": 0.16, "note": "traditional print, strong demand"},
+        {"label": "Red-and-white saree", "library_key": "Sarees", "emoji": "🥻", "momentum": 0.3, "note": "the Pohela Boishakh signature look"},
+        {"label": "White cotton panjabi", "library_key": "Kurtas", "emoji": "👔", "momentum": 0.22, "note": "men's Boishakh staple"},
+        {"label": "Block-print kurti", "library_key": "Kurtis", "emoji": "👚", "momentum": 0.16, "note": "traditional print, strong demand"},
     ],
     "winter": [
-        {"label": "Woolen shawl", "emoji": "🧣", "momentum": 0.29, "note": "Dec-Feb essential"},
-        {"label": "Quilted winter jacket", "emoji": "🧥", "momentum": 0.24, "note": "best-selling outerwear"},
-        {"label": "Knit sweater", "emoji": "🧶", "momentum": 0.19, "note": "steady winter demand"},
+        {"label": "Woolen shawl", "library_key": "Stoles", "emoji": "🧣", "momentum": 0.29, "note": "Dec-Feb essential"},
+        {"label": "Quilted winter jacket", "library_key": "Jackets", "emoji": "🧥", "momentum": 0.24, "note": "best-selling outerwear"},
+        {"label": "Knit sweater", "library_key": "Sweaters", "emoji": "🧶", "momentum": 0.19, "note": "steady winter demand"},
     ],
     "default": [
-        {"label": "Casual cotton kurti", "emoji": "👚", "momentum": 0.12, "note": "everyday best-seller"},
-        {"label": "Graphic t-shirt", "emoji": "👕", "momentum": 0.1, "note": "popular with younger buyers"},
-        {"label": "Slim-fit shirt", "emoji": "👔", "momentum": 0.09, "note": "office wear staple"},
-        {"label": "Printed three-piece", "emoji": "👗", "momentum": 0.11, "note": "broad appeal year-round"},
+        {"label": "Casual cotton kurti", "library_key": "Kurtis", "emoji": "👚", "momentum": 0.12, "note": "everyday best-seller"},
+        {"label": "Graphic t-shirt", "library_key": "Tshirts", "emoji": "👕", "momentum": 0.1, "note": "popular with younger buyers"},
+        {"label": "Slim-fit shirt", "library_key": "Shirts", "emoji": "👔", "momentum": 0.09, "note": "office wear staple"},
+        {"label": "Printed three-piece", "library_key": "Kurta Sets", "emoji": "👗", "momentum": 0.11, "note": "broad appeal year-round"},
     ],
 }
 
@@ -104,7 +106,7 @@ class FashionStyleModel:
         items = STYLE_BANK.get(bucket, STYLE_BANK["default"])
         out = []
         for it in items:
-            sample = self._sample_images_for(it["label"])
+            sample = self._sample_images_for(it.get("library_key") or it["label"])
             out.append({
                 "label": it["label"],
                 "momentum": it["momentum"],
@@ -114,9 +116,9 @@ class FashionStyleModel:
             })
         return out
 
-    def _sample_images_for(self, label: str) -> List[str]:
-        if self._library_index and label in self._library_index:
-            files = self._library_index[label][:4]
+    def _sample_images_for(self, key: str) -> List[str]:
+        if self._library_index and key in self._library_index:
+            files = self._library_index[key][:4]
             return [f"/images/{f}" for f in files]
         return []  # no library yet -> UI shows the emoji placeholder
 
