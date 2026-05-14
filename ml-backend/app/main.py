@@ -51,7 +51,7 @@ def _startup() -> None:
 
 _ARTIFACT_FILES = {
     "shop_type": ["shop_type_clf.joblib", "shop_type_clf.onnx"],
-    "attributes": ["attribute_extractor", "attr_ner.onnx"],
+    "attributes": ["attribute_extractor", "attr_ner.onnx", "attribute_gazetteer.json"],
     "forecaster": ["demand_forecaster.json"],
     "festival": ["festival_uplift.json"],
     "catalog_gap": ["catalog_gap_rules.pkl"],

@@ -54,8 +54,36 @@ class AttributeExtractor:
     def __init__(self) -> None:
         self.loaded = False
         self._nlp = None
+        # Mined gazetteers from training/train_attributes.py override the
+        # hardcoded base lists when the artifact is present.
+        self._brands = BRANDS
+        self._colors = COLORS
+        self._materials = MATERIALS
+        self._garments = GARMENTS
+        self._occasions = OCCASIONS
 
     def load(self) -> None:
+        # Preferred artifact: a JSON gazetteer mined from labeled product data.
+        gaz_path = ARTIFACTS_DIR / "attribute_gazetteer.json"
+        if gaz_path.exists():
+            try:
+                import json
+                data = json.loads(gaz_path.read_text(encoding="utf-8"))
+                if isinstance(data.get("brands"), list):
+                    self._brands = data["brands"]
+                if isinstance(data.get("colors"), list):
+                    self._colors = data["colors"]
+                if isinstance(data.get("materials"), list):
+                    self._materials = data["materials"]
+                if isinstance(data.get("garments"), dict):
+                    self._garments = data["garments"]
+                if isinstance(data.get("occasions"), dict):
+                    self._occasions = data["occasions"]
+                self.loaded = True
+            except Exception:
+                self.loaded = False
+
+        # Optional richer NER model if someone trains one later.
         spacy_dir = ARTIFACTS_DIR / "attribute_extractor"
         try:
             if spacy_dir.exists():
@@ -63,7 +91,8 @@ class AttributeExtractor:
                 self._nlp = spacy.load(str(spacy_dir))
                 self.loaded = True
         except Exception:
-            self.loaded = False
+            # leave self.loaded as set by the gazetteer branch
+            pass
 
     def extract(self, listing: dict) -> dict:
         title = (listing.get("title") or "")
@@ -71,11 +100,11 @@ class AttributeExtractor:
         text = f"{title} {desc}".strip()
         low = text.lower()
 
-        garment = self._first_match(low, GARMENTS)
-        occasion = self._first_match(low, OCCASIONS)
-        color = next((c for c in COLORS if re.search(rf"\b{re.escape(c)}\b", low)), None)
-        material = next((m for m in MATERIALS if re.search(rf"\b{re.escape(m)}\b", low)), None)
-        brand = next((b for b in BRANDS if b in low), None)
+        garment = self._first_match(low, self._garments)
+        occasion = self._first_match(low, self._occasions)
+        color = next((c for c in self._colors if re.search(rf"\b{re.escape(c)}\b", low)), None)
+        material = next((m for m in self._materials if re.search(rf"\b{re.escape(m)}\b", low)), None)
+        brand = next((b for b in self._brands if b in low), None)
         gender = None
         if any(w in low for w in ["women", "ladies", "girl", "woman", "female"]):
             gender = "women"

@@ -17,8 +17,9 @@ RUN pip install -r requirements.txt
 COPY app ./app
 COPY artifacts ./artifacts
 
-# Render / Railway / HF Spaces set PORT in the env; default to 8000 for local docker run.
-ENV PORT=8000
-EXPOSE 8000
+# HF Spaces sets PORT=7860 by default; Render/Railway/Fly inject their own.
+# Default to 7860 so the container is HF-Space-ready out of the box.
+ENV PORT=7860
+EXPOSE 7860
 
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

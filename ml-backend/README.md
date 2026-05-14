@@ -1,3 +1,13 @@
+---
+title: DokanAI ML Backend
+emoji: 🛍️
+colorFrom: green
+colorTo: yellow
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # DokanAI ML Backend
 
 FastAPI service that backs the **Analyze my Shop** feature: it detects the shop type, extracts catalogue attributes, forecasts demand, surfaces festival outlook + missing goods + trends, and (for clothing shops) returns popular dress styles with sample images.
