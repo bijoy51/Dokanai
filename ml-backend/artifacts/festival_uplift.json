@@ -1,49 +1,281 @@
 {
-  "beauty": {
+  "baby": {
     "ramadan-start": {
-      "beauty": 1.0,
-      "clothing": 0.99,
-      "food": 1.0
+      "clothing": 1.61,
+      "home": 1.69
     },
     "eid-ul-fitr": {
-      "beauty": 1.0,
-      "clothing": 1.02,
-      "food": 0.98
+      "clothing": 1.52,
+      "home": 1.37
     },
     "pohela-boishakh": {
-      "beauty": 0.99,
-      "clothing": 1.0,
-      "food": 1.03
+      "clothing": 1.25,
+      "home": 1.23
     },
     "eid-ul-adha": {
-      "beauty": 0.98,
-      "clothing": 1.0,
-      "food": 0.9
+      "clothing": 0.99,
+      "home": 1.15
     },
     "valentines": {
-      "beauty": 1.0,
-      "clothing": 0.96,
-      "food": 1.03
+      "clothing": 1.67,
+      "home": 1.75
+    }
+  },
+  "bakery": {
+    "ramadan-start": {
+      "clothing": 1.35
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.55
+    },
+    "pohela-boishakh": {
+      "clothing": 1.26
+    },
+    "eid-ul-adha": {
+      "clothing": 1.05
+    },
+    "valentines": {
+      "clothing": 1.33
+    }
+  },
+  "beauty": {
+    "ramadan-start": {
+      "beauty": 1.17,
+      "clothing": 1.13,
+      "food": 1.11
+    },
+    "eid-ul-fitr": {
+      "beauty": 1.54,
+      "clothing": 1.55,
+      "food": 1.63
+    },
+    "pohela-boishakh": {
+      "beauty": 1.02,
+      "clothing": 0.97,
+      "food": 1.02
+    },
+    "eid-ul-adha": {
+      "beauty": 1.02,
+      "clothing": 1.0,
+      "food": 0.91
+    },
+    "valentines": {
+      "beauty": 1.23,
+      "clothing": 1.17,
+      "food": 1.23
+    }
+  },
+  "books": {
+    "ramadan-start": {
+      "clothing": 1.58
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.53
+    },
+    "pohela-boishakh": {
+      "clothing": 1.23
+    },
+    "eid-ul-adha": {
+      "clothing": 0.96
+    },
+    "valentines": {
+      "clothing": 1.62
     }
   },
   "clothing": {
     "ramadan-start": {
-      "clothing": 1.0
+      "clothing": 1.62
     },
     "eid-ul-fitr": {
-      "clothing": 1.0
+      "clothing": 1.53
     },
     "pohela-boishakh": {
-      "clothing": 1.01
+      "clothing": 1.23
     },
     "eid-ul-adha": {
-      "clothing": 1.01
+      "clothing": 1.03
     },
     "valentines": {
-      "clothing": 1.0
+      "clothing": 1.68
     }
   },
   "electronics": {
+    "ramadan-start": {
+      "clothing": 0.98
+    },
+    "eid-ul-fitr": {
+      "clothing": 0.98
+    },
+    "pohela-boishakh": {
+      "clothing": 1.02
+    },
+    "eid-ul-adha": {
+      "clothing": 0.92
+    },
+    "valentines": {
+      "clothing": 0.98
+    }
+  },
+  "food": {
+    "ramadan-start": {
+      "clothing": 1.34,
+      "food": 1.33
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.52,
+      "food": 1.55
+    },
+    "pohela-boishakh": {
+      "clothing": 1.21,
+      "food": 1.24
+    },
+    "eid-ul-adha": {
+      "clothing": 1.01,
+      "food": 0.99
+    },
+    "valentines": {
+      "clothing": 1.31,
+      "food": 1.31
+    }
+  },
+  "footwear": {
+    "ramadan-start": {
+      "clothing": 1.61,
+      "food": 1.43
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.52,
+      "food": 1.63
+    },
+    "pohela-boishakh": {
+      "clothing": 1.26,
+      "food": 1.32
+    },
+    "eid-ul-adha": {
+      "clothing": 1.01,
+      "food": 0.93
+    },
+    "valentines": {
+      "clothing": 1.7,
+      "food": 1.51
+    }
+  },
+  "gifts": {
+    "ramadan-start": {
+      "clothing": 1.57
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.5
+    },
+    "pohela-boishakh": {
+      "clothing": 1.22
+    },
+    "eid-ul-adha": {
+      "clothing": 0.94
+    },
+    "valentines": {
+      "clothing": 1.66
+    }
+  },
+  "grocery": {
+    "ramadan-start": {
+      "clothing": 1.35,
+      "food": 1.36,
+      "home": 1.32
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.55,
+      "food": 1.55,
+      "home": 1.6
+    },
+    "pohela-boishakh": {
+      "clothing": 1.26,
+      "food": 1.24,
+      "home": 1.18
+    },
+    "eid-ul-adha": {
+      "clothing": 1.02,
+      "food": 1.09,
+      "home": 0.82
+    },
+    "valentines": {
+      "clothing": 1.32,
+      "food": 1.32,
+      "home": 1.28
+    }
+  },
+  "home": {
+    "ramadan-start": {
+      "clothing": 1.01,
+      "home": 1.01
+    },
+    "eid-ul-fitr": {
+      "clothing": 0.99,
+      "home": 1.0
+    },
+    "pohela-boishakh": {
+      "clothing": 1.25,
+      "home": 1.29
+    },
+    "eid-ul-adha": {
+      "clothing": 1.08,
+      "home": 1.07
+    },
+    "valentines": {
+      "clothing": 0.96,
+      "home": 1.01
+    }
+  },
+  "jewellery": {
+    "ramadan-start": {
+      "clothing": 1.4,
+      "food": 1.6
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.37,
+      "food": 1.29
+    },
+    "pohela-boishakh": {
+      "clothing": 1.17,
+      "food": 1.11
+    },
+    "eid-ul-adha": {
+      "clothing": 1.09,
+      "food": 0.87
+    },
+    "valentines": {
+      "clothing": 1.44,
+      "food": 1.55
+    }
+  },
+  "kitchen": {
+    "ramadan-start": {
+      "clothing": 1.0,
+      "food": 1.06,
+      "home": 1.09
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.01,
+      "food": 1.01,
+      "home": 1.03
+    },
+    "pohela-boishakh": {
+      "clothing": 1.25,
+      "food": 1.13,
+      "home": 1.2
+    },
+    "eid-ul-adha": {
+      "clothing": 1.0,
+      "food": 1.0,
+      "home": 1.12
+    },
+    "valentines": {
+      "clothing": 0.99,
+      "food": 0.96,
+      "home": 1.1
+    }
+  },
+  "mobile_accessories": {
     "ramadan-start": {
       "clothing": 0.99
     },
@@ -51,7 +283,7 @@
       "clothing": 1.0
     },
     "pohela-boishakh": {
-      "clothing": 0.99
+      "clothing": 1.0
     },
     "eid-ul-adha": {
       "clothing": 1.02
@@ -60,104 +292,126 @@
       "clothing": 0.98
     }
   },
-  "food": {
+  "pet": {
     "ramadan-start": {
-      "clothing": 1.01,
-      "food": 1.0
+      "clothing": 1.0
     },
     "eid-ul-fitr": {
-      "clothing": 0.99,
-      "food": 1.0
+      "clothing": 0.99
     },
     "pohela-boishakh": {
-      "clothing": 1.02,
-      "food": 1.0
+      "clothing": 1.25
     },
     "eid-ul-adha": {
-      "clothing": 1.05,
-      "food": 1.04
+      "clothing": 1.11
     },
     "valentines": {
-      "clothing": 1.0,
-      "food": 1.0
-    }
-  },
-  "grocery": {
-    "ramadan-start": {
-      "clothing": 1.0,
-      "food": 1.0
-    },
-    "eid-ul-fitr": {
-      "clothing": 1.0,
-      "food": 1.01
-    },
-    "pohela-boishakh": {
-      "clothing": 1.0,
-      "food": 1.0
-    },
-    "eid-ul-adha": {
-      "clothing": 1.01,
-      "food": 0.99
-    },
-    "valentines": {
-      "clothing": 1.0,
-      "food": 0.99
-    }
-  },
-  "home": {
-    "ramadan-start": {
-      "clothing": 1.01,
-      "home": 1.0
-    },
-    "eid-ul-fitr": {
-      "clothing": 0.99,
-      "home": 0.99
-    },
-    "pohela-boishakh": {
-      "clothing": 0.98,
-      "home": 0.99
-    },
-    "eid-ul-adha": {
-      "clothing": 0.99,
-      "home": 1.02
-    },
-    "valentines": {
-      "clothing": 1.0,
-      "home": 1.0
+      "clothing": 0.99
     }
   },
   "pharmacy": {
     "ramadan-start": {
-      "clothing": 1.01
+      "beauty": 1.39,
+      "clothing": 1.34
     },
     "eid-ul-fitr": {
-      "clothing": 1.0
+      "beauty": 1.56,
+      "clothing": 1.55
     },
     "pohela-boishakh": {
-      "clothing": 1.0
+      "beauty": 1.22,
+      "clothing": 1.25
     },
     "eid-ul-adha": {
-      "clothing": 0.96
+      "beauty": 0.67,
+      "clothing": 1.05
     },
     "valentines": {
-      "clothing": 1.0
+      "beauty": 1.46,
+      "clothing": 1.31
+    }
+  },
+  "religious": {
+    "ramadan-start": {
+      "beauty": 1.36,
+      "clothing": 1.34,
+      "home": 1.4
+    },
+    "eid-ul-fitr": {
+      "beauty": 1.4,
+      "clothing": 1.54,
+      "home": 1.47
+    },
+    "pohela-boishakh": {
+      "beauty": 1.29,
+      "clothing": 1.21,
+      "home": 1.44
+    },
+    "eid-ul-adha": {
+      "beauty": 1.55,
+      "clothing": 1.07,
+      "home": 0.88
+    },
+    "valentines": {
+      "beauty": 1.26,
+      "clothing": 1.32,
+      "home": 1.23
+    }
+  },
+  "sports": {
+    "ramadan-start": {
+      "clothing": 1.56,
+      "home": 1.76
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.53,
+      "home": 1.53
+    },
+    "pohela-boishakh": {
+      "clothing": 1.25,
+      "home": 1.24
+    },
+    "eid-ul-adha": {
+      "clothing": 1.03,
+      "home": 1.24
+    },
+    "valentines": {
+      "clothing": 1.63,
+      "home": 1.97
     }
   },
   "stationery": {
     "ramadan-start": {
-      "clothing": 1.01
+      "clothing": 1.6
     },
     "eid-ul-fitr": {
-      "clothing": 1.0
+      "clothing": 1.53
     },
     "pohela-boishakh": {
-      "clothing": 1.0
+      "clothing": 1.27
     },
     "eid-ul-adha": {
       "clothing": 1.02
     },
     "valentines": {
-      "clothing": 1.01
+      "clothing": 1.68
+    }
+  },
+  "toys": {
+    "ramadan-start": {
+      "clothing": 1.56
+    },
+    "eid-ul-fitr": {
+      "clothing": 1.52
+    },
+    "pohela-boishakh": {
+      "clothing": 1.22
+    },
+    "eid-ul-adha": {
+      "clothing": 1.04
+    },
+    "valentines": {
+      "clothing": 1.63
     }
   }
 }

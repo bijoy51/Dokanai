@@ -18,6 +18,9 @@ from ..data.festivals import festival_boost
 CATEGORY_PRIORS: Dict[str, float] = {
     "clothing": 1.2, "grocery": 3.5, "electronics": 0.8, "beauty": 1.5,
     "home": 1.0, "food": 2.2, "pharmacy": 2.0, "stationery": 1.6,
+    "jewellery": 0.3, "footwear": 1.0, "toys": 0.7, "books": 0.8,
+    "sports": 0.6, "baby": 1.4, "mobile_accessories": 1.8, "gifts": 0.5,
+    "kitchen": 0.9, "pet": 0.7, "religious": 0.8, "bakery": 2.5,
 }
 
 # Map a product type to a festival-boost category bucket.

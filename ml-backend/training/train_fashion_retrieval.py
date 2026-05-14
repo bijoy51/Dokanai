@@ -41,7 +41,7 @@ LIB = ARTIFACTS / "image_library"
 LIB.mkdir(parents=True, exist_ok=True)
 
 
-def main(n_samples: int = 4000, min_per_class: int = 40, batch_size: int = 32) -> None:
+def main(n_samples: int = 44072, min_per_class: int = 80, batch_size: int = 64) -> None:
     print(f"loading {n_samples} samples from ashraq/fashion-product-images-small ...")
     ds = load_dataset(
         "ashraq/fashion-product-images-small",

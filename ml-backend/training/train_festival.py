@@ -53,7 +53,13 @@ def main() -> None:
     sales["date"] = pd.to_datetime(sales["date"])
     sales["category"] = sales["product_type"].map(to_category)
 
-    # baseline = daily mean demand far from any festival window
+    # festivals affect ORDER VOLUME per day, not units per order. Aggregate to
+    # daily totals first, then compare festival-window daily mean to baseline
+    # daily mean for the same (shop_type, category) cohort.
+    daily = (sales.groupby(["shop_type", "category", "date"], as_index=False)["qty"]
+                  .sum().rename(columns={"qty": "daily_qty"}))
+
+    # baseline window = days outside any festival lead-window
     fest_windows = []
     for f in FESTIVALS:
         fd = datetime.strptime(f.date, "%Y-%m-%d").date()
@@ -63,28 +69,31 @@ def main() -> None:
         d = d.date()
         return any(start <= d <= end for start, end in fest_windows)
 
-    sales["in_fest_window"] = sales["date"].apply(in_any_window)
+    daily["in_fest_window"] = daily["date"].apply(in_any_window)
 
-    baseline = (sales[~sales["in_fest_window"]]
-                .groupby(["shop_type", "category"])["qty"].mean()
+    baseline = (daily[~daily["in_fest_window"]]
+                .groupby(["shop_type", "category"])["daily_qty"].mean()
                 .rename("baseline").reset_index())
 
     uplift = {}
     for f in FESTIVALS:
         fd = datetime.strptime(f.date, "%Y-%m-%d").date()
-        mask = sales["date"].apply(lambda d: in_window(d, fd, f.lead_days))
-        window = sales[mask]
+        mask = daily["date"].apply(lambda d: in_window(d, fd, f.lead_days))
+        window = daily[mask]
         if window.empty:
             continue
-        win_mean = (window.groupby(["shop_type", "category"])["qty"].mean()
+        win_mean = (window.groupby(["shop_type", "category"])["daily_qty"].mean()
                           .rename("win").reset_index())
         merged = win_mean.merge(baseline, on=["shop_type", "category"], how="inner")
         merged["uplift"] = (merged["win"] / merged["baseline"]).round(2)
         for _, row in merged.iterrows():
+            if pd.isna(row["uplift"]) or row["baseline"] == 0:
+                continue
             uplift.setdefault(row["shop_type"], {}).setdefault(f.id, {})[row["category"]] = float(row["uplift"])
 
     (ARTIFACTS / "festival_uplift.json").write_text(json.dumps(uplift, indent=2))
-    print(f"wrote festival_uplift.json with {sum(len(v) for v in uplift.values())} festival entries")
+    total = sum(sum(len(v2) for v2 in v.values()) for v in uplift.values())
+    print(f"wrote festival_uplift.json with {total} (shop_type, festival, category) entries")
 
 
 if __name__ == "__main__":
