@@ -37,8 +37,16 @@ class FestivalDemandModel:
                 by_shop = self._uplift.get(shop_type) or {}
                 by_fest = by_shop.get(f.id) or {}
                 if by_fest:
-                    # use the strongest learned multiplier among this shop's relevant categories
-                    uplift = max(by_fest.values())
+                    learned = max(by_fest.values())
+                    # Trust the learned coefficient only when it shows a clear
+                    # lift over baseline. If a festival's lead window falls
+                    # near the edge of the training data (so we have only a
+                    # day or two of "festival" rows), the mined uplift
+                    # collapses to ~1.0 even though demand actually spikes.
+                    # In that case the calendar's hand-set peak_boost is a
+                    # better signal than a degenerate learned one.
+                    if learned >= 1.15:
+                        uplift = learned
             out.append({
                 "festival": f.name,
                 "date": f.date,
