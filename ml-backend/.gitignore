@@ -7,10 +7,10 @@ venv
 .env.*
 .vercel
 
-# Generated / downloaded data (regenerate from training/)
+# Downloaded Kaggle / UCI data (not committed; regenerate via data_prep.py)
 datasets/raw/
 datasets/processed/
-datasets/synthetic/
+# datasets/synthetic/ IS committed (large shop_sales.csv via Git LFS)
 
 # Training-time cache (large + recomputable)
 artifacts/_embeddings_cache.npz
