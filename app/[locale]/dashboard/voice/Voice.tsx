@@ -1,8 +1,11 @@
 import { t, type Locale } from "@/lib/i18n/messages";
 import { VoiceMic } from "./VoiceMic";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function VoicePage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   return (
     <div>
       <header className="mb-6">

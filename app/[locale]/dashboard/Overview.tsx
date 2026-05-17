@@ -4,9 +4,12 @@ import { StatusPill } from "@/components/StatusPill";
 import { computeOverview, recentOrders } from "@/lib/ai/overview";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatNumber, formatPercent } from "@/lib/utils";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function OverviewPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const m = computeOverview();
   const recent = recentOrders(10);
 

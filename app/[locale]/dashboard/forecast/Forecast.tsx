@@ -3,9 +3,12 @@ import { dailyForecastTotal, festivalCalendar, forecastAll } from "@/lib/ai/fore
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatNumber } from "@/lib/utils";
 import { CalendarDays, AlertTriangle, TrendingUp } from "lucide-react";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function ForecastPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const daily = dailyForecastTotal();
   const all = forecastAll();
   const fests = festivalCalendar();

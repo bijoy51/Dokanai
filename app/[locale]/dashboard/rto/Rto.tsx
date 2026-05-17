@@ -2,9 +2,12 @@ import { pendingCodRisks, rtoSummaryProjection } from "@/lib/ai/rto";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT } from "@/lib/utils";
 import { ShieldAlert, ShieldCheck, Phone, Truck } from "lucide-react";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function RtoPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const risks = pendingCodRisks().slice(0, 30);
   const summary = rtoSummaryProjection();
 

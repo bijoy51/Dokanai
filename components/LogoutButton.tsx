@@ -14,6 +14,7 @@ export function LogoutButton({ locale }: { locale: Locale }) {
       // Drop any cached per-account state so the next user starts clean.
       try {
         sessionStorage.removeItem("dokanai:analyze:v1");
+        localStorage.removeItem("dokanai:dataset:v1");
       } catch {
         /* storage unavailable — non-fatal */
       }

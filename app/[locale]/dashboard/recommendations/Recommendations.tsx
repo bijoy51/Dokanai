@@ -1,9 +1,12 @@
 import { customerSummaries } from "@/lib/ai/recommend";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { RecommendationView } from "./RecommendationView";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function RecommendationsPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const customers = customerSummaries(80);
 
   return (

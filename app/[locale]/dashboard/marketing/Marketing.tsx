@@ -1,9 +1,12 @@
 import { audienceCount } from "@/lib/ai/marketing";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { MarketingComposer } from "./MarketingComposer";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function MarketingPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const counts = {
     all: audienceCount("all"),
     dormant: audienceCount("dormant"),

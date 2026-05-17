@@ -47,7 +47,11 @@ export async function POST(req: Request) {
   }
 
   if (!listings.length) {
-    return NextResponse.json({ error: "At least one listing is required." }, { status: 400 });
+    const msg =
+      body.useAccountData
+        ? "Your shop has no data yet. Import your products on the Khata-to-Cloud page, or upload a CSV above."
+        : "At least one listing is required.";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   const payload: AnalyzeShopRequest = {

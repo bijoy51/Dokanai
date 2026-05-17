@@ -2,6 +2,8 @@ import { rfmScores, segmentBreakdown } from "@/lib/ai/churn";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatNumber } from "@/lib/utils";
 import { Crown, HeartHandshake, AlertTriangle, Moon, Sparkles } from "lucide-react";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 const segIcon = {
   vip: Crown,
@@ -21,6 +23,7 @@ const segStyle: Record<string, string> = {
 
 export default function CustomersPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const all = rfmScores();
   const summary = segmentBreakdown();
   const top = all.slice(0, 30);

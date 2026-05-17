@@ -2,9 +2,12 @@ import { bundleRecommendations, priceRecommendations } from "@/lib/ai/pricing";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatPercent } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, Package } from "lucide-react";
+import { isShopEmpty } from "@/lib/data/store";
+import { NoDataState } from "@/components/NoDataState";
 
 export default function PricingPage({ params }: { params: { locale: string } }) {
   const locale = params.locale as Locale;
+  if (isShopEmpty()) return <NoDataState locale={locale} />;
   const prices = priceRecommendations().slice(0, 12);
   const bundles = bundleRecommendations(6);
 
