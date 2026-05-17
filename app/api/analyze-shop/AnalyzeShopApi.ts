@@ -63,11 +63,14 @@ export async function POST(req: Request) {
     // with a trailing newline from shell-piped values).
     const base = backend.replace(/\s+/g, "").replace(/\/+$/, "");
     try {
+      // 55s budget: the HF Space free tier sleeps after inactivity and a
+      // cold start takes 30-60s. A short timeout here is what made the app
+      // silently fall back to the heuristic stub on the first request.
       const upstream = await fetch(`${base}/analyze-shop`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(55_000),
       });
       const json = (await upstream.json()) as AnalyzeShopResponse;
       if (!upstream.ok) {

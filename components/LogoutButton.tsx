@@ -11,6 +11,12 @@ export function LogoutButton({ locale }: { locale: Locale }) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } finally {
+      // Drop any cached per-account state so the next user starts clean.
+      try {
+        sessionStorage.removeItem("dokanai:analyze:v1");
+      } catch {
+        /* storage unavailable — non-fatal */
+      }
       window.location.assign(`/${locale}`);
     }
   };

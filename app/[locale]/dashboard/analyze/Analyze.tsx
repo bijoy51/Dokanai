@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   ArrowDown,
@@ -27,6 +27,10 @@ import type {
 
 const MAX_PHOTOS = 5;
 const MAX_PHOTO_BYTES = 1_000_000;
+
+// The last analysis is cached here so a page reload keeps the results
+// instead of resetting to the empty upload form. Cleared on logout.
+const STORAGE_KEY = "dokanai:analyze:v1";
 
 interface ParsedListing {
   title: string;
@@ -112,6 +116,25 @@ export default function Analyze({ params }: { params: { locale: string } }) {
   const salesInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
 
+  // Restore the previous analysis (and shop fields) on mount so reloading
+  // the page does not throw away the results the user just generated.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as {
+        result?: AnalyzeShopResponse;
+        shopName?: string;
+        region?: string;
+      };
+      if (saved.result) setResult(saved.result);
+      if (typeof saved.shopName === "string") setShopName(saved.shopName);
+      if (typeof saved.region === "string" && saved.region) setRegion(saved.region);
+    } catch {
+      /* ignore corrupt / unavailable storage */
+    }
+  }, []);
+
   const onPickPhotos = (files: FileList | null) => {
     setPhotoErr("");
     if (!files) return;
@@ -174,6 +197,15 @@ export default function Analyze({ params }: { params: { locale: string } }) {
         return;
       }
       setResult(data as AnalyzeShopResponse);
+      // Persist so a reload keeps the results.
+      try {
+        sessionStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ result: data, shopName, region }),
+        );
+      } catch {
+        /* storage full or disabled — non-fatal */
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("analyze.error", locale));
     } finally {
