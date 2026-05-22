@@ -98,5 +98,12 @@ export function getStore(): Store {
 /** True when the signed-in account has no shop data yet. */
 export function isShopEmpty(): boolean {
   const s = getStore();
-  return s.products.length === 0 && s.orders.length === 0;
+  const empty = s.products.length === 0 && s.orders.length === 0;
+  console.log("[store] isShopEmpty", {
+    email: currentEmail(),
+    products: s.products.length,
+    orders: s.orders.length,
+    empty,
+  });
+  return empty;
 }

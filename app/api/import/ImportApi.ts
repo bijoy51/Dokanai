@@ -39,11 +39,15 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const LOG = "[import-api]";
   const session = getSession();
+  console.log(`${LOG} POST start`, { email: session?.email ?? null });
   if (!session) {
+    console.warn(`${LOG} no session -> 401`);
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
   if (session.email === DEMO) {
+    console.warn(`${LOG} demo account -> 403`);
     return NextResponse.json(
       { error: "The demo account uses sample data and cannot be overwritten." },
       { status: 403 },
@@ -53,13 +57,16 @@ export async function POST(req: Request) {
   let body: { products?: RawProduct[]; sales?: RawSale[] };
   try {
     body = await req.json();
-  } catch {
+  } catch (e) {
+    console.error(`${LOG} JSON parse failed`, e);
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
   const products = Array.isArray(body.products) ? body.products : [];
   const sales = Array.isArray(body.sales) ? body.sales : [];
+  console.log(`${LOG} received`, { products: products.length, sales: sales.length });
   if (products.length === 0 && sales.length === 0) {
+    console.warn(`${LOG} empty payload -> 400`);
     return NextResponse.json(
       { error: "Upload at least a products CSV or a sales CSV." },
       { status: 400 },
@@ -67,7 +74,13 @@ export async function POST(req: Request) {
   }
 
   const dataset = buildDataset(products, sales);
+  console.log(`${LOG} buildDataset ->`, {
+    products: dataset.products.length,
+    customers: dataset.customers.length,
+    orders: dataset.orders.length,
+  });
   if (dataset.products.length === 0) {
+    console.warn(`${LOG} 0 products after build -> 400`);
     return NextResponse.json(
       { error: "No usable products found in the uploaded files." },
       { status: 400 },
@@ -75,7 +88,8 @@ export async function POST(req: Request) {
   }
   setImported(session.email, dataset);
   // Persist durably so a render on a different / cold instance can find it.
-  await persistImported(session.email, dataset);
+  const persisted = await persistImported(session.email, dataset);
+  console.log(`${LOG} kvConfigured persist result =`, persisted, "(false = ML_ADMIN_SECRET not set, in-memory only)");
 
   return NextResponse.json({
     ok: true,

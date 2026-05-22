@@ -101,54 +101,100 @@ export function KhataUploader({ locale }: { locale: Locale }) {
   }, []);
 
   const runImport = async () => {
+    const LOG = "[import]";
+    console.log(`${LOG} 1. runImport start`, {
+      productsFile: productsFile?.name ?? null,
+      productsSize: productsFile?.size ?? 0,
+      salesFile: salesFile?.name ?? null,
+      salesSize: salesFile?.size ?? 0,
+    });
     setError("");
     setDone(null);
     if (!productsFile && !salesFile) {
+      console.warn(`${LOG} no file selected -> aborting`);
       setError(t("ob.errNoFile", locale));
       return;
     }
     setLoading(true);
     try {
-      const products = productsFile
-        ? parseCsv(await readFile(productsFile))
-            .map((r) => ({
-              name: pick(r, ...PRODUCT_NAME_KEYS),
-              category: pick(r, "category", "type") || undefined,
-              price: n(pick(r, "price", "unit_price", "rate")),
-              cost: n(pick(r, "cost", "buy_price")),
-              stock: n(pick(r, "stock", "quantity", "qty")),
-            }))
-            .filter((p) => p.name)
-        : [];
-      const sales = salesFile
-        ? parseCsv(await readFile(salesFile))
-            .map((r) => ({
-              date: pick(r, ...DATE_KEYS),
-              product: pick(r, ...PRODUCT_NAME_KEYS),
-              qty: n(pick(r, ...QTY_KEYS)),
-              unit_price: n(pick(r, ...UNIT_PRICE_KEYS)),
-              customer: pick(r, "customer", "customer_name", "buyer") || undefined,
-              payment: pick(r, "payment", "payment_method") || undefined,
-              status: pick(r, "status", "delivery_status") || undefined,
-              city: pick(r, "city", "district", "location") || undefined,
-            }))
-            .filter((s) => s.date && s.product)
-        : [];
+      let productRows: Record<string, string>[] = [];
+      let salesRows: Record<string, string>[] = [];
+      if (productsFile) {
+        const text = await readFile(productsFile);
+        productRows = parseCsv(text);
+        console.log(`${LOG} 2a. products CSV read`, {
+          textLength: text.length,
+          parsedRows: productRows.length,
+          headers: productRows[0] ? Object.keys(productRows[0]) : [],
+          firstRow: productRows[0] ?? null,
+        });
+      }
+      if (salesFile) {
+        const text = await readFile(salesFile);
+        salesRows = parseCsv(text);
+        console.log(`${LOG} 2b. sales CSV read`, {
+          textLength: text.length,
+          parsedRows: salesRows.length,
+          headers: salesRows[0] ? Object.keys(salesRows[0]) : [],
+          firstRow: salesRows[0] ?? null,
+        });
+      }
+
+      const products = productRows
+        .map((r) => ({
+          name: pick(r, ...PRODUCT_NAME_KEYS),
+          category: pick(r, "category", "type") || undefined,
+          price: n(pick(r, "price", "unit_price", "rate")),
+          cost: n(pick(r, "cost", "buy_price")),
+          stock: n(pick(r, "stock", "quantity", "qty")),
+        }))
+        .filter((p) => p.name);
+      const sales = salesRows
+        .map((r) => ({
+          date: pick(r, ...DATE_KEYS),
+          product: pick(r, ...PRODUCT_NAME_KEYS),
+          qty: n(pick(r, ...QTY_KEYS)),
+          unit_price: n(pick(r, ...UNIT_PRICE_KEYS)),
+          customer: pick(r, "customer", "customer_name", "buyer") || undefined,
+          payment: pick(r, "payment", "payment_method") || undefined,
+          status: pick(r, "status", "delivery_status") || undefined,
+          city: pick(r, "city", "district", "location") || undefined,
+        }))
+        .filter((s) => s.date && s.product);
+
+      console.log(`${LOG} 3. mapped rows`, {
+        usableProducts: products.length,
+        usableSales: sales.length,
+        sampleProduct: products[0] ?? null,
+        sampleSale: sales[0] ?? null,
+      });
 
       // A file was chosen but no rows matched the expected columns — tell the
       // user up front instead of POSTing empty arrays and failing opaquely.
       if (products.length === 0 && sales.length === 0) {
+        console.error(`${LOG} 3!. 0 usable rows after mapping -> column mismatch`, {
+          productHeaders: productRows[0] ? Object.keys(productRows[0]) : [],
+          salesHeaders: salesRows[0] ? Object.keys(salesRows[0]) : [],
+        });
         setError(t("ob.errGeneric", locale));
         return;
       }
 
+      const bodyStr = JSON.stringify({ products, sales });
+      console.log(`${LOG} 4. POST /api/import`, {
+        bodyBytes: bodyStr.length,
+        bodyMB: (bodyStr.length / 1048576).toFixed(2),
+      });
       const res = await fetch("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ products, sales }),
+        body: bodyStr,
       });
+      console.log(`${LOG} 5. response`, { status: res.status, ok: res.ok });
       const data = await res.json();
+      console.log(`${LOG} 6. response body`, data);
       if (!res.ok) {
+        console.error(`${LOG} 6!. server rejected import`, data);
         setError(data.error || t("ob.errGeneric", locale));
         return;
       }
@@ -161,12 +207,16 @@ export function KhataUploader({ locale }: { locale: Locale }) {
           JSON.stringify({ email: status?.email ?? "", products, sales }),
         );
         sessionStorage.removeItem("dokanai:rehydrate-attempts");
-      } catch {
+        console.log(`${LOG} 7. localStorage mirror saved`);
+      } catch (e) {
+        console.warn(`${LOG} 7!. localStorage mirror failed (likely quota)`, e);
         /* storage full/disabled — non-fatal */
       }
+      console.log(`${LOG} 8. import success, counts =`, data.counts);
       setDone(data.counts);
       router.refresh();
     } catch (e) {
+      console.error(`${LOG} EXCEPTION`, e);
       setError(e instanceof Error ? e.message : t("ob.errGeneric", locale));
     } finally {
       setLoading(false);

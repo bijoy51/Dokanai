@@ -19,6 +19,7 @@ export default async function DashboardLayout({
   // Warm this instance's in-memory store from the durable KV before any child
   // page reads it synchronously via getStore()/isShopEmpty(). This is what
   // makes imported data survive Vercel's per-instance statelessness.
+  console.log("[layout] hydrateImported for", session.email);
   await hydrateImported(session.email);
   return (
     <DashboardShell locale={locale} userName={session.name} userEmail={session.email}>

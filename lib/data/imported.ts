@@ -61,10 +61,17 @@ export async function persistImported(email: string, d: Dataset): Promise<boolea
  * account already has data cached on this instance.
  */
 export async function hydrateImported(email: string): Promise<void> {
-  if (!kvConfigured()) return;
+  if (!kvConfigured()) {
+    console.log("[imported] hydrate skipped: KV not configured (ML_ADMIN_SECRET missing) — in-memory only");
+    return;
+  }
   const e = norm(email);
-  if (store.has(e)) return;
+  if (store.has(e)) {
+    console.log("[imported] hydrate: already in memory cache for", e);
+    return;
+  }
   const d = await kvGet<Dataset>(kvKey(e));
+  console.log("[imported] hydrate from KV for", e, "found =", isDataset(d), d ? { products: (d as Dataset).products?.length } : null);
   if (isDataset(d)) store.set(e, d);
 }
 
