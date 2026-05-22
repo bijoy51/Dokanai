@@ -65,6 +65,22 @@ function n(v: string | undefined): number | undefined {
   return Number.isFinite(x) ? x : undefined;
 }
 
+/** First non-empty value among the given column aliases. */
+function pick(row: Record<string, string>, ...keys: string[]): string {
+  for (const k of keys) {
+    const v = row[k];
+    if (v !== undefined && v.trim() !== "") return v.trim();
+  }
+  return "";
+}
+
+// Common header aliases so real-world exports (e.g. the synthetic
+// shop_sales.csv that uses `product_type`) import without manual renaming.
+const PRODUCT_NAME_KEYS = ["name", "product", "product_type", "product_name", "item", "item_name", "title", "productname"];
+const DATE_KEYS = ["date", "order_date", "sale_date", "datetime", "time"];
+const QTY_KEYS = ["qty", "quantity", "units", "count"];
+const UNIT_PRICE_KEYS = ["unit_price", "unitprice", "price", "rate", "amount"];
+
 export function KhataUploader({ locale }: { locale: Locale }) {
   const router = useRouter();
   const [status, setStatus] = useState<ImportStatus | null>(null);
@@ -96,28 +112,35 @@ export function KhataUploader({ locale }: { locale: Locale }) {
       const products = productsFile
         ? parseCsv(await readFile(productsFile))
             .map((r) => ({
-              name: r["name"] ?? r["title"] ?? "",
-              category: r["category"] ?? undefined,
-              price: n(r["price"]),
-              cost: n(r["cost"]),
-              stock: n(r["stock"]),
+              name: pick(r, ...PRODUCT_NAME_KEYS),
+              category: pick(r, "category", "type") || undefined,
+              price: n(pick(r, "price", "unit_price", "rate")),
+              cost: n(pick(r, "cost", "buy_price")),
+              stock: n(pick(r, "stock", "quantity", "qty")),
             }))
             .filter((p) => p.name)
         : [];
       const sales = salesFile
         ? parseCsv(await readFile(salesFile))
             .map((r) => ({
-              date: r["date"] ?? "",
-              product: r["product"] ?? r["name"] ?? r["title"] ?? "",
-              qty: n(r["qty"]),
-              unit_price: n(r["unit_price"]) ?? n(r["price"]),
-              customer: r["customer"] ?? undefined,
-              payment: r["payment"] ?? r["payment_method"] ?? undefined,
-              status: r["status"] ?? undefined,
-              city: r["city"] ?? undefined,
+              date: pick(r, ...DATE_KEYS),
+              product: pick(r, ...PRODUCT_NAME_KEYS),
+              qty: n(pick(r, ...QTY_KEYS)),
+              unit_price: n(pick(r, ...UNIT_PRICE_KEYS)),
+              customer: pick(r, "customer", "customer_name", "buyer") || undefined,
+              payment: pick(r, "payment", "payment_method") || undefined,
+              status: pick(r, "status", "delivery_status") || undefined,
+              city: pick(r, "city", "district", "location") || undefined,
             }))
             .filter((s) => s.date && s.product)
         : [];
+
+      // A file was chosen but no rows matched the expected columns — tell the
+      // user up front instead of POSTing empty arrays and failing opaquely.
+      if (products.length === 0 && sales.length === 0) {
+        setError(t("ob.errGeneric", locale));
+        return;
+      }
 
       const res = await fetch("/api/import", {
         method: "POST",
