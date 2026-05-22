@@ -15,9 +15,9 @@ export async function POST(req: Request) {
   if (!email || !password) {
     return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
   }
-  const acc = verifyAccount(email, password);
+  const acc = await verifyAccount(email, password);
   if (!acc) {
-    const hint = accountExists(email)
+    const hint = (await accountExists(email))
       ? "Incorrect password."
       : "No account found for that email. Please sign up.";
     return NextResponse.json({ error: hint }, { status: 401 });

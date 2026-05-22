@@ -121,6 +121,47 @@ def admin_refresh_trends(x_admin_secret: str = Header(default="")) -> dict:
     return {"refreshed": True, "cache_loaded": loaded}
 
 
+# ---------- shared key-value store ----------
+# DokanAI accounts on Vercel are stateless across serverless instances, so
+# imported shop data is kept here instead. This Space is a single always-on
+# container, so this dict is shared across every request and persists for the
+# lifetime of the container (kept alive by the keep-warm cron).
+
+_KV: dict[str, dict] = {}
+
+
+@app.get("/kv/{key}")
+def kv_get(key: str, x_admin_secret: str = Header(default="")) -> dict:
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="invalid admin secret")
+    data = _KV.get(key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="not found")
+    return data
+
+
+@app.post("/kv/{key}")
+async def kv_set(key: str, request: Request, x_admin_secret: str = Header(default="")) -> dict:
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="invalid admin secret")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
+    _KV[key] = body
+    return {"ok": True, "key": key}
+
+
+@app.delete("/kv/{key}")
+def kv_delete(key: str, x_admin_secret: str = Header(default="")) -> dict:
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="invalid admin secret")
+    _KV.pop(key, None)
+    return {"ok": True}
+
+
 @app.exception_handler(Exception)
 async def _unhandled(_: Request, exc: Exception):
     # Never leak a stack trace; surface a clean error to the frontend.

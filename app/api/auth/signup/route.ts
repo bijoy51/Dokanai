@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   try {
-    const acc = createAccount(body.name ?? "", body.email ?? "", body.password ?? "");
+    const acc = await createAccount(body.name ?? "", body.email ?? "", body.password ?? "");
     cookies().set(SESSION_COOKIE, signSession({ email: acc.email, name: acc.name }), {
       httpOnly: true,
       sameSite: "lax",
