@@ -10,6 +10,7 @@
  * seed (see lib/data/store.ts).
  */
 import type { Customer, Order, OrderItem, Product, ProductCategory, DeliveryStatus } from "@/lib/types";
+import { kvConfigured, kvGet, kvPut, kvDelete } from "@/lib/kv";
 
 export interface Dataset {
   products: Product[];
@@ -20,6 +21,8 @@ export interface Dataset {
 const store = new Map<string, Dataset>();
 
 const norm = (email: string) => email.trim().toLowerCase();
+
+// ---------- in-memory cache (synchronous, used by getStore) ----------
 
 export function setImported(email: string, d: Dataset): void {
   store.set(norm(email), d);
@@ -32,6 +35,43 @@ export function hasImported(email: string): boolean {
 }
 export function clearImported(email: string): void {
   store.delete(norm(email));
+}
+
+// ---------- durable persistence (shared KV) ----------
+// The in-memory Map is per-instance and lost on a Vercel cold start, so the
+// dataset is also written to the shared KV. hydrateImported() pulls it back
+// into the Map at the start of a request (see the dashboard layout), which is
+// what lets the synchronous getStore() path find the data on any instance.
+
+const kvKey = (email: string) => `dataset:${norm(email)}`;
+
+function isDataset(v: unknown): v is Dataset {
+  const d = v as Partial<Dataset> | null;
+  return !!d && Array.isArray(d.products) && Array.isArray(d.customers) && Array.isArray(d.orders);
+}
+
+/** Persist a dataset durably. Best-effort: in-memory + mirror are backups. */
+export async function persistImported(email: string, d: Dataset): Promise<boolean> {
+  return kvPut(kvKey(email), d);
+}
+
+/**
+ * Ensure this instance's Map has the account's dataset, pulling it from the
+ * KV on a cache miss. No-op when the KV isn't configured (local dev) or the
+ * account already has data cached on this instance.
+ */
+export async function hydrateImported(email: string): Promise<void> {
+  if (!kvConfigured()) return;
+  const e = norm(email);
+  if (store.has(e)) return;
+  const d = await kvGet<Dataset>(kvKey(e));
+  if (isDataset(d)) store.set(e, d);
+}
+
+/** Clear an account's dataset from both the cache and the KV. */
+export async function removeImported(email: string): Promise<void> {
+  clearImported(email);
+  await kvDelete(kvKey(email));
 }
 
 // ---------- CSV-row -> Dataset builder ----------

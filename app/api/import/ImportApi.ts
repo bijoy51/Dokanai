@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
   buildDataset,
-  clearImported,
   hasImported,
+  hydrateImported,
+  persistImported,
+  removeImported,
   setImported,
   type RawProduct,
   type RawSale,
@@ -26,6 +28,9 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
+  // Pull the dataset from the durable KV into this instance's cache so the
+  // status reflects data imported on any instance, not just this one.
+  if (session.email !== DEMO) await hydrateImported(session.email);
   return NextResponse.json({
     email: session.email,
     hasData: session.email === DEMO || hasImported(session.email),
@@ -69,6 +74,8 @@ export async function POST(req: Request) {
     );
   }
   setImported(session.email, dataset);
+  // Persist durably so a render on a different / cold instance can find it.
+  await persistImported(session.email, dataset);
 
   return NextResponse.json({
     ok: true,
@@ -85,6 +92,6 @@ export async function DELETE() {
   if (!session) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-  if (session.email !== DEMO) clearImported(session.email);
+  if (session.email !== DEMO) await removeImported(session.email);
   return NextResponse.json({ ok: true });
 }

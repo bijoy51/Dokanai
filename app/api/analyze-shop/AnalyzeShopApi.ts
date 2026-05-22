@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStore } from "@/lib/data/store";
+import { getSession } from "@/lib/auth";
+import { hydrateImported } from "@/lib/data/imported";
 import { analyzeShopStub, type AnalyzeShopRequest, type AnalyzeShopResponse } from "@/lib/ai/shop-analysis";
 
 /**
@@ -25,6 +27,8 @@ export async function POST(req: Request) {
   let listings = body.listings ?? [];
   let sales = body.sales ?? [];
   if (body.useAccountData || (listings.length === 0 && sales.length === 0)) {
+    const session = getSession();
+    if (session) await hydrateImported(session.email);
     const store = getStore();
     listings = store.products.map((p) => ({
       title: p.name,
