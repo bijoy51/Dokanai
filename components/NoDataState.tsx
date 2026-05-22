@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { UploadCloud, ArrowRight, Loader2 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
@@ -23,14 +22,12 @@ const MAX_ATTEMPTS = 3;
 type Phase = "checking" | "rehydrating" | "empty";
 
 export function NoDataState({ locale }: { locale: Locale }) {
-  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("checking");
   const ran = useRef(false);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
-    let cancelled = false;
 
     (async () => {
       let mirror: { email?: string; products?: unknown[]; sales?: unknown[] } | null = null;
@@ -47,8 +44,17 @@ export function NoDataState({ locale }: { locale: Locale }) {
         return;
       }
 
+      // We render only when the server reports no data, yet the browser still
+      // holds a mirror of an earlier import. The server's imported store is
+      // per-instance in-memory and is lost on a cold start / when this render
+      // lands on a different serverless instance. Re-POST the mirror to
+      // repopulate the server, then do a FULL reload so the page re-renders
+      // from scratch against the now-rehydrated instance. A soft refresh would
+      // NOT remount this component, leaving it frozen on the spinner forever.
       const attempts = Number(sessionStorage.getItem(ATTEMPT_KEY) || "0");
       if (attempts >= MAX_ATTEMPTS) {
+        // Rehydration is not sticking — stop reloading and show the import
+        // prompt instead of an endless spinner.
         setPhase("empty");
         return;
       }
@@ -63,22 +69,23 @@ export function NoDataState({ locale }: { locale: Locale }) {
           setPhase("empty");
           return;
         }
-        await fetch("/api/import", {
+        const postRes = await fetch("/api/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ products: mirror!.products ?? [], sales: mirror!.sales ?? [] }),
         });
+        if (!postRes.ok) {
+          setPhase("empty");
+          return;
+        }
         sessionStorage.setItem(ATTEMPT_KEY, String(attempts + 1));
-        if (!cancelled) router.refresh();
+        // Hard reload: remounts the tree so the server re-renders with data.
+        window.location.reload();
       } catch {
         setPhase("empty");
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+  }, []);
 
   if (phase === "checking" || phase === "rehydrating") {
     return (
