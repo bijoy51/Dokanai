@@ -1,0 +1,36 @@
+# Speed up `docker build` and keep the web image lean. Mirrors .vercelignore
+# where it matters, plus dev-only / large files that don't belong in the
+# frontend container.
+
+# Dependencies + build outputs are produced inside the image.
+node_modules
+.next
+out
+
+# VCS / IDE / local meta.
+.git
+.gitattributes
+.github
+.vercel
+.claude
+
+# The Python ML backend has its own Dockerfile and build context.
+ml-backend
+
+# Large data / docs not needed by the Next.js runtime.
+*.csv
+*.md
+*.log
+
+# Local env files — never bake secrets into the image. Compose injects them
+# from the host's .env at runtime instead.
+.env
+.env.*
+!.env.example
+
+# Misc.
+tsconfig.tsbuildinfo
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
