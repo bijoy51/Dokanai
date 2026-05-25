@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   Bot,
   Loader2,
@@ -320,20 +322,76 @@ function MessageBubble({ msg, locale }: { msg: ChatMessageUi; locale: Locale }) 
     <div className={`flex items-start gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
       <Avatar role={msg.role} />
       <div
-        className={`rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap max-w-[80%] ${
+        className={`rounded-2xl px-3 py-2 text-sm max-w-[80%] ${
           isUser
-            ? "bg-brand-600 text-white rounded-tr-sm"
+            ? "bg-brand-600 text-white rounded-tr-sm whitespace-pre-wrap"
             : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm"
         }`}
       >
-        {msg.role === "assistant" && msg.typed ? <TypingText text={msg.content} /> : msg.content}
+        {isUser ? msg.content : <AssistantMarkdown content={msg.content} />}
         {!isUser && msg.toolNames && msg.toolNames.length > 0 && (
-          <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1 flex-wrap">
+          <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1 flex-wrap border-t border-slate-100 pt-1.5">
             <Wrench className="w-3 h-3" />
             {t("pilot.usedTools", locale)}: {msg.toolNames.join(", ")}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Renders the assistant's reply as Markdown so GFM tables become real
+ * <table>s, lists, bold, and inline code render properly. Plain-text replies
+ * still look the same. Tailwind styles each tag explicitly so we don't need
+ * the `@tailwindcss/typography` plugin.
+ */
+function AssistantMarkdown({ content }: { content: string }) {
+  return (
+    <div className="text-sm text-slate-800 leading-relaxed space-y-2">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          p: ({ children }) => <p className="whitespace-pre-wrap">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-5 space-y-0.5">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-5 space-y-0.5">{children}</ol>,
+          li: ({ children }) => <li>{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          code: ({ children }) => (
+            <code className="px-1 py-0.5 rounded bg-slate-100 text-[12px] font-mono">{children}</code>
+          ),
+          pre: ({ children }) => (
+            <pre className="rounded bg-slate-100 p-2 overflow-x-auto text-[12px]">{children}</pre>
+          ),
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noreferrer" className="text-brand-700 underline">
+              {children}
+            </a>
+          ),
+          // GFM tables (remark-gfm)
+          table: ({ children }) => (
+            <div className="overflow-x-auto -mx-3 px-3">
+              <table className="min-w-full border border-slate-200 rounded-md text-[13px] my-1">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => <thead className="bg-slate-50 text-slate-600">{children}</thead>,
+          tbody: ({ children }) => <tbody>{children}</tbody>,
+          tr: ({ children }) => <tr className="border-t border-slate-100">{children}</tr>,
+          th: ({ children }) => (
+            <th className="px-2.5 py-1.5 text-left font-medium border-r last:border-r-0 border-slate-100">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="px-2.5 py-1.5 align-top border-r last:border-r-0 border-slate-100">{children}</td>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
 }

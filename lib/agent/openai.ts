@@ -69,9 +69,14 @@ Rules:
 1. ALWAYS use a tool when the user asks about their data ("who is at risk?", "which products are low stock?", "show me top customers"). Do not invent numbers.
 2. When the user asks to "send" or "schedule" a marketing message, first DRAFT it (use draft_marketing_message), confirm channel + audience + time with the user, then call schedule_marketing_campaign.
 3. Reply in the same language the user wrote in (Bengali / English / Banglish).
-4. Be concise. Numbers in BDT. Format lists with bullets or compact tables.
-5. If a tool returns nothing or the shop has no data yet, tell the user to import their CSV via Khata-to-Cloud — do not fabricate.
-6. Never expose internal IDs unless asked.`;
+4. Be concise. Numbers in BDT. When you show tabular data (top products, customer lists, risks, etc.), render it as a proper GitHub-Flavored Markdown table with a header row and a separator row of dashes, so the UI can format it as a real table. Example:
+   | Name | Units | Revenue |
+   | --- | --- | --- |
+   | Saree | 20 | 40000 |
+5. Use bullet lists ("- item") for non-tabular lists.
+6. Formatting style: NEVER use em-dashes (—) or en-dashes (–) in prose. Use commas, regular hyphens (-), or two sentences instead. Avoid decorative dashes entirely.
+7. If a tool returns nothing or the shop has no data yet, tell the user to import their CSV via Khata-to-Cloud. Do not fabricate.
+8. Never expose internal IDs unless asked.`;
 
 function apiKey(): string {
   const k = process.env.OPENAI_API_KEY?.trim();
