@@ -46,6 +46,10 @@ services:
       ML_BACKEND_URL: http://ml-backend:7860
       ML_ADMIN_SECRET: ${ADMIN_SECRET:-local-dev-secret}
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-auth-secret-change-me}
+      # Pilot AI agent (OpenAI). Leave blank to disable; the rest of the app
+      # still works, the Pilot tab will just show a "not configured" error.
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       NODE_ENV: production
       PORT: "3000"
       HOSTNAME: "0.0.0.0"

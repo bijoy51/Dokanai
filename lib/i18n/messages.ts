@@ -33,6 +33,20 @@ const en: Dict = {
   "nav.voice": "Bangla Voice",
   "nav.rto": "RTO Risk",
   "nav.onboarding": "Khata-to-Cloud",
+  "nav.pilot": "Pilot",
+
+  // pilot (AI agent)
+  "pilot.title": "Pilot",
+  "pilot.subtitle": "Your AI co-pilot for marketing, pricing, recommendations and sales — with live access to your shop.",
+  "pilot.expertTagline": "Auto-marketing · Pricing · Recommendations · Sales",
+  "pilot.newChat": "New chat",
+  "pilot.history": "History",
+  "pilot.noHistory": "No past chats yet.",
+  "pilot.readyPrompts": "Ready prompts",
+  "pilot.thinking": "Pilot is thinking…",
+  "pilot.inputPlaceholder": "Ask Pilot anything about your shop…",
+  "pilot.send": "Send",
+  "pilot.usedTools": "Used",
 
   // overview
   "overview.title": "Business Overview",
@@ -294,6 +308,20 @@ const bn: Dict = {
   "nav.voice": "বাংলা ভয়েস",
   "nav.rto": "RTO ঝুঁকি",
   "nav.onboarding": "খাতা-টু-ক্লাউড",
+  "nav.pilot": "Pilot",
+
+  // pilot (AI agent)
+  "pilot.title": "Pilot",
+  "pilot.subtitle": "আপনার AI কো-পাইলট — মার্কেটিং, প্রাইসিং, রেকমেন্ডেশন আর সেলসের জন্য। আপনার দোকানের সব ডেটা চোখের সামনে।",
+  "pilot.expertTagline": "অটো-মার্কেটিং · প্রাইসিং · রেকমেন্ডেশন · সেলস",
+  "pilot.newChat": "নতুন চ্যাট",
+  "pilot.history": "ইতিহাস",
+  "pilot.noHistory": "এখনও কোনো পুরনো চ্যাট নেই।",
+  "pilot.readyPrompts": "Ready prompts",
+  "pilot.thinking": "Pilot ভাবছে…",
+  "pilot.inputPlaceholder": "Pilot-কে আপনার দোকান সম্পর্কে কিছু জিজ্ঞেস করুন…",
+  "pilot.send": "পাঠাও",
+  "pilot.usedTools": "ব্যবহার করেছে",
 
   "overview.title": "ব্যবসা ওভারভিউ",
   "overview.subtitle": "গত ৩০ দিন, উৎসব-চালিত ট্রেন্ডসহ।",
