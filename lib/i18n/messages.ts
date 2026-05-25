@@ -47,6 +47,7 @@ const en: Dict = {
   "pilot.inputPlaceholder": "Ask Pilot anything about your shop…",
   "pilot.send": "Send",
   "pilot.usedTools": "Used",
+  "pilot.chatGone": "That chat is no longer available. Starting a fresh one.",
 
   // overview
   "overview.title": "Business Overview",
@@ -322,6 +323,7 @@ const bn: Dict = {
   "pilot.inputPlaceholder": "Pilot-কে আপনার দোকান সম্পর্কে কিছু জিজ্ঞেস করুন…",
   "pilot.send": "পাঠাও",
   "pilot.usedTools": "ব্যবহার করেছে",
+  "pilot.chatGone": "এই চ্যাটটি আর পাওয়া যাচ্ছে না। নতুন একটি চ্যাট শুরু করছি।",
 
   "overview.title": "ব্যবসা ওভারভিউ",
   "overview.subtitle": "গত ৩০ দিন, উৎসব-চালিত ট্রেন্ডসহ।",

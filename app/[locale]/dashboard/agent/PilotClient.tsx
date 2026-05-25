@@ -85,6 +85,9 @@ export function PilotClient({ locale }: { locale: Locale }) {
   const [error, setError] = useState("");
   const [showGreeting, setShowGreeting] = useState(true);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const scrollToBottom = () =>
+    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
 
   // Load chat history sidebar on mount.
   useEffect(() => {
@@ -96,8 +99,14 @@ export function PilotClient({ locale }: { locale: Locale }) {
 
   // Auto-scroll to bottom when messages change.
   useEffect(() => {
-    scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
+    scrollToBottom();
   }, [messages, sending]);
+
+  // Keep focus on the input so Enter always sends (focus drifts after replies
+  // / clicks elsewhere otherwise).
+  useEffect(() => {
+    if (!sending) inputRef.current?.focus();
+  }, [sending, currentChatId, showGreeting]);
 
   const newChat = () => {
     setCurrentChatId(null);
@@ -105,6 +114,7 @@ export function PilotClient({ locale }: { locale: Locale }) {
     setShowGreeting(true);
     setError("");
     setInput("");
+    setTimeout(() => inputRef.current?.focus(), 0);
   };
 
   const openChat = async (id: string) => {
@@ -113,7 +123,14 @@ export function PilotClient({ locale }: { locale: Locale }) {
     setShowGreeting(false);
     try {
       const r = await fetch(`/api/agent/history/${encodeURIComponent(id)}`);
-      if (!r.ok) throw new Error(await r.text());
+      if (r.status === 404) {
+        // Stale sidebar entry — drop it and reset to a new chat.
+        setHistory((h) => h.filter((c) => c.id !== id));
+        newChat();
+        setError(t("pilot.chatGone", locale));
+        return;
+      }
+      if (!r.ok) throw new Error(`Failed to load chat (${r.status})`);
       const data = await r.json();
       setMessages(
         (data.messages ?? [])
@@ -172,6 +189,8 @@ export function PilotClient({ locale }: { locale: Locale }) {
       setError(e instanceof Error ? e.message : "Pilot failed.");
     } finally {
       setSending(false);
+      // Re-focus so the next Enter sends without a click.
+      setTimeout(() => inputRef.current?.focus(), 0);
     }
   };
 
@@ -237,7 +256,7 @@ export function PilotClient({ locale }: { locale: Locale }) {
           {showGreeting && messages.length === 0 && <Greeting locale={locale} />}
 
           {messages.map((m, i) => (
-            <MessageBubble key={i} msg={m} locale={locale} />
+            <MessageBubble key={i} msg={m} locale={locale} onTick={scrollToBottom} />
           ))}
 
           {sending && (
@@ -266,15 +285,17 @@ export function PilotClient({ locale }: { locale: Locale }) {
           className="border-t border-slate-200 p-3 flex items-end gap-2 bg-white"
         >
           <textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void send();
               }
             }}
             rows={1}
+            autoFocus
             placeholder={t("pilot.inputPlaceholder", locale)}
             className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
           />
@@ -316,7 +337,15 @@ function Greeting({ locale }: { locale: Locale }) {
   );
 }
 
-function MessageBubble({ msg, locale }: { msg: ChatMessageUi; locale: Locale }) {
+function MessageBubble({
+  msg,
+  locale,
+  onTick,
+}: {
+  msg: ChatMessageUi;
+  locale: Locale;
+  onTick?: () => void;
+}) {
   const isUser = msg.role === "user";
   return (
     <div className={`flex items-start gap-2 ${isUser ? "flex-row-reverse" : ""}`}>
@@ -328,7 +357,11 @@ function MessageBubble({ msg, locale }: { msg: ChatMessageUi; locale: Locale }) 
             : "bg-white border border-slate-200 text-slate-800 rounded-tl-sm"
         }`}
       >
-        {isUser ? msg.content : <AssistantMarkdown content={msg.content} />}
+        {isUser ? (
+          msg.content
+        ) : (
+          <AssistantMarkdown content={msg.content} typed={!!msg.typed} onTick={onTick} />
+        )}
         {!isUser && msg.toolNames && msg.toolNames.length > 0 && (
           <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1 flex-wrap border-t border-slate-100 pt-1.5">
             <Wrench className="w-3 h-3" />
@@ -341,12 +374,44 @@ function MessageBubble({ msg, locale }: { msg: ChatMessageUi; locale: Locale }) 
 }
 
 /**
- * Renders the assistant's reply as Markdown so GFM tables become real
- * <table>s, lists, bold, and inline code render properly. Plain-text replies
- * still look the same. Tailwind styles each tag explicitly so we don't need
- * the `@tailwindcss/typography` plugin.
+ * Renders the assistant's reply as Markdown (GFM, so tables work) and, when
+ * `typed` is true, reveals the content one character at a time at ~25 ms/char.
+ * The Markdown is re-parsed each tick — partial markdown renders best-effort
+ * (a half-written table looks like pipes until the closing row arrives, then
+ * snaps into a real <table>). Calls `onTick` so the chat scroller can follow.
  */
-function AssistantMarkdown({ content }: { content: string }) {
+function AssistantMarkdown({
+  content,
+  typed,
+  onTick,
+}: {
+  content: string;
+  typed: boolean;
+  onTick?: () => void;
+}) {
+  const [shown, setShown] = useState(typed ? "" : content);
+  useEffect(() => {
+    if (!typed) {
+      setShown(content);
+      return;
+    }
+    const reduced =
+      typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setShown(content);
+      return;
+    }
+    setShown("");
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setShown(content.slice(0, i));
+      onTick?.();
+      if (i >= content.length) clearInterval(id);
+    }, 25);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, typed]);
   return (
     <div className="text-sm text-slate-800 leading-relaxed space-y-2">
       <ReactMarkdown
@@ -390,7 +455,7 @@ function AssistantMarkdown({ content }: { content: string }) {
           ),
         }}
       >
-        {content}
+        {shown}
       </ReactMarkdown>
     </div>
   );

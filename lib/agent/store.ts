@@ -1,15 +1,21 @@
 /**
  * Per-account persistence for the Pilot AI agent.
  *
- * Stores chat history and scheduled marketing campaigns in the same shared
- * /kv store the rest of the app uses (see lib/kv.ts), so chats and campaigns
- * survive Vercel cold-starts and follow the user across serverless instances.
+ * Chats are stored with **one KV key per chat** (`chat:<email>:<chatId>`)
+ * plus a small summary index (`chat-index:<email>`). This avoids the race
+ * where two concurrent saves of different chats each read+modify+write a
+ * single array key and clobber each other's entry. The chat content itself
+ * is now safe under concurrency; only the index is best-effort (worst case
+ * a chat is briefly missing from the sidebar — its content is still
+ * retrievable by id).
  *
- * Keys: `chats:<email>` and `campaigns:<email>`. Each holds the full list as
- * a single JSON object — fine at hackathon scale; trivial to migrate to a
- * real DB later by swapping lib/kv.ts.
+ * Campaigns remain a single array per account — they're write-once-per-
+ * scheduling and rarely overlap.
+ *
+ * Reads transparently fall back to the legacy single-array key
+ * `chats:<email>` so chats created before this refactor still appear.
  */
-import { kvGet, kvPut } from "@/lib/kv";
+import { kvDelete, kvGet, kvPut } from "@/lib/kv";
 
 const norm = (email: string) => email.trim().toLowerCase();
 
@@ -36,43 +42,90 @@ export interface Chat {
   messages: ChatMessage[];
 }
 
-interface ChatsRecord {
+export interface ChatSummary {
+  id: string;
+  title: string;
+  updatedAt: number;
+}
+
+interface ChatIndex {
+  items: ChatSummary[];
+}
+
+/** Legacy shape (kept for read-only back-compat). */
+interface LegacyChatsRecord {
   chats: Chat[];
 }
 
-const chatsKey = (email: string) => `chats:${norm(email)}`;
+const chatKey = (email: string, id: string) => `chat:${norm(email)}:${id}`;
+const indexKey = (email: string) => `chat-index:${norm(email)}`;
+const legacyKey = (email: string) => `chats:${norm(email)}`;
 
-export async function listChats(email: string): Promise<Chat[]> {
-  const rec = await kvGet<ChatsRecord>(chatsKey(email));
+const MAX_CHATS_IN_INDEX = 50;
+
+async function loadLegacy(email: string): Promise<Chat[]> {
+  const rec = await kvGet<LegacyChatsRecord>(legacyKey(email));
   return Array.isArray(rec?.chats) ? rec!.chats : [];
 }
 
+export async function listChats(email: string): Promise<ChatSummary[]> {
+  const idx = await kvGet<ChatIndex>(indexKey(email));
+  const fromIndex: ChatSummary[] = Array.isArray(idx?.items) ? idx!.items : [];
+  // Merge in any legacy chats that aren't yet in the new index so the user
+  // doesn't lose history written before the refactor.
+  const legacy = await loadLegacy(email);
+  if (legacy.length === 0) return sortByUpdated(fromIndex);
+  const seen = new Set(fromIndex.map((s) => s.id));
+  for (const c of legacy) {
+    if (!seen.has(c.id)) {
+      fromIndex.push({ id: c.id, title: c.title, updatedAt: c.updatedAt });
+      seen.add(c.id);
+    }
+  }
+  return sortByUpdated(fromIndex);
+}
+
+function sortByUpdated(arr: ChatSummary[]): ChatSummary[] {
+  return [...arr].sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
 export async function getChat(email: string, chatId: string): Promise<Chat | null> {
-  const all = await listChats(email);
-  return all.find((c) => c.id === chatId) ?? null;
+  // Primary: per-chat key (race-safe).
+  const direct = await kvGet<Chat>(chatKey(email, chatId));
+  if (direct && Array.isArray(direct.messages)) return direct;
+  // Back-compat: chats created before the per-key refactor.
+  const legacy = await loadLegacy(email);
+  return legacy.find((c) => c.id === chatId) ?? null;
 }
 
 export async function saveChat(email: string, chat: Chat): Promise<void> {
-  const all = await listChats(email);
-  const i = all.findIndex((c) => c.id === chat.id);
-  if (i >= 0) all[i] = chat;
-  else all.unshift(chat);
-  // Cap to last 50 chats per account to keep the KV value bounded.
-  const trimmed = all.slice(0, 50);
-  await kvPut(chatsKey(email), { chats: trimmed } satisfies ChatsRecord);
+  // 1) Write the chat itself to its own key — concurrent saves of OTHER
+  //    chats can no longer clobber this one.
+  await kvPut(chatKey(email, chat.id), chat);
+
+  // 2) Best-effort: upsert the summary in the index. A race here can at
+  //    worst drop one summary briefly; the chat content is safe in step 1.
+  const idx = (await kvGet<ChatIndex>(indexKey(email))) ?? { items: [] };
+  const items = Array.isArray(idx.items) ? idx.items : [];
+  const i = items.findIndex((s) => s.id === chat.id);
+  const summary: ChatSummary = { id: chat.id, title: chat.title, updatedAt: chat.updatedAt };
+  if (i >= 0) items[i] = summary;
+  else items.unshift(summary);
+  items.sort((a, b) => b.updatedAt - a.updatedAt);
+  await kvPut(indexKey(email), { items: items.slice(0, MAX_CHATS_IN_INDEX) } satisfies ChatIndex);
 }
 
 export async function deleteChat(email: string, chatId: string): Promise<void> {
-  const all = await listChats(email);
-  const next = all.filter((c) => c.id !== chatId);
-  await kvPut(chatsKey(email), { chats: next } satisfies ChatsRecord);
+  await kvDelete(chatKey(email, chatId));
+  const idx = (await kvGet<ChatIndex>(indexKey(email))) ?? { items: [] };
+  const next = (idx.items ?? []).filter((s) => s.id !== chatId);
+  await kvPut(indexKey(email), { items: next } satisfies ChatIndex);
 }
 
 export function newChat(firstUserMessage: string): Chat {
   const now = Date.now();
   return {
     id: `c_${now.toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
-    // Title is the first 60 chars of the first user message; can be re-titled later.
     title: firstUserMessage.trim().slice(0, 60) || "New chat",
     createdAt: now,
     updatedAt: now,
@@ -108,7 +161,10 @@ export async function listCampaigns(email: string): Promise<Campaign[]> {
   return Array.isArray(rec?.campaigns) ? rec!.campaigns : [];
 }
 
-export async function addCampaign(email: string, c: Omit<Campaign, "id" | "createdAt" | "status">): Promise<Campaign> {
+export async function addCampaign(
+  email: string,
+  c: Omit<Campaign, "id" | "createdAt" | "status">,
+): Promise<Campaign> {
   const all = await listCampaigns(email);
   const created: Campaign = {
     ...c,
