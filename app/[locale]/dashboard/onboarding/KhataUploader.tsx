@@ -159,6 +159,11 @@ export function KhataUploader({ locale }: { locale: Locale }) {
           payment: pick(r, "payment", "payment_method") || undefined,
           status: pick(r, "status", "delivery_status") || undefined,
           city: pick(r, "city", "district", "location") || undefined,
+          // Email-marketing fields: optional. Without consent (truthy value
+          // in the consent column) the customer stays unsubscribed and
+          // never receives an email campaign.
+          email: pick(r, "email", "customer_email") || undefined,
+          consent: pick(r, "consent", "opt_in", "subscribed", "marketing_consent") || undefined,
         }))
         .filter((s) => s.date && s.product);
 

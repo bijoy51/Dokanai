@@ -21,7 +21,17 @@ import {
   type Channel as MarketingChannel,
   type Goal,
 } from "@/lib/ai/marketing";
-import { addCampaign, listCampaigns, type CampaignChannel } from "@/lib/agent/store";
+import {
+  addCampaign,
+  getCampaign,
+  listCampaigns,
+  setCustomerSubscribed,
+  updateCampaign,
+  dequeueDue,
+  type CampaignChannel,
+} from "@/lib/agent/store";
+import { emailConfigured } from "@/lib/email/resend";
+import { resolveAudience } from "@/lib/email/audience";
 
 export interface ToolContext {
   email: string;
@@ -250,19 +260,39 @@ export const TOOLS: Tool[] = [
   {
     name: "draft_marketing_message",
     description:
-      "Generate a draft marketing message in EN and BN for a given audience, goal, and channel. Use this to PROPOSE a message before scheduling.",
+      "Generate a draft marketing message in EN and BN for a given audience, goal, and channel. Use this to PROPOSE a message before scheduling. For channel='email', also returns suggested subject lines.",
     parameters: {
       type: "object",
       properties: {
         audience: { type: "string", enum: ["all", "vip", "dormant", "atrisk"] },
         goal: { type: "string", enum: ["winback", "upsell", "festival"] },
-        channel: { type: "string", enum: ["whatsapp", "sms", "messenger"] },
+        channel: { type: "string", enum: ["whatsapp", "sms", "messenger", "email"] },
       },
       required: ["audience", "goal", "channel"],
       additionalProperties: false,
     },
     run: (args) => {
-      const a = args as { audience: Audience; goal: Goal; channel: MarketingChannel };
+      const a = args as { audience: Audience; goal: Goal; channel: MarketingChannel | "email" };
+      // The underlying generator doesn't have an email persona yet; for email
+      // we reuse the whatsapp body (longer-form, friendly) and synthesize a
+      // simple subject from the goal so Pilot has something concrete to show
+      // the user before calling schedule_marketing_campaign.
+      if (a.channel === "email") {
+        const msg = generateMessage(a.audience, a.goal, "whatsapp");
+        const subjEn =
+          a.goal === "winback"
+            ? "We miss you — 15% off, just for you"
+            : a.goal === "upsell"
+              ? "You'll love this — picked for you"
+              : "Festival special inside";
+        const subjBn =
+          a.goal === "winback"
+            ? "আপনাকে মিস করছি — ১৫% ছাড় শুধু আপনার জন্য"
+            : a.goal === "upsell"
+              ? "আপনার জন্য বেছে নেওয়া — দেখে নিন"
+              : "উৎসবের বিশেষ অফার";
+        return { ...msg, subjectEn: subjEn, subjectBn: subjBn };
+      }
       return generateMessage(a.audience, a.goal, a.channel);
     },
   },
@@ -271,31 +301,69 @@ export const TOOLS: Tool[] = [
   {
     name: "schedule_marketing_campaign",
     description:
-      "Schedule a marketing campaign for sending later. v1 is RECORD-ONLY: it stores the campaign with status='scheduled' and returns the saved record. Nothing is actually sent. Always confirm channel, audience, message and scheduled_for with the user before calling this.",
+      "Schedule a marketing campaign. For channel='email' the platform actually sends the emails at scheduled_for time via the cron worker (requires RESEND_API_KEY + FROM_EMAIL in env). For other channels v1 is RECORD-ONLY. ALWAYS confirm channel + audience + message (+ subject for email) + scheduled_for with the user before calling this.",
     parameters: {
       type: "object",
       properties: {
         channel: { type: "string", enum: ["sms", "whatsapp", "email", "push", "other"] },
-        audience: { type: "string", description: "Free-text audience description, e.g. 'at-risk customers' or 'top 50 buyers'." },
-        message: { type: "string" },
-        scheduled_for: { type: "string", description: "When to send. ISO date/time or human description e.g. 'tomorrow 6pm'." },
+        audience: {
+          type: "string",
+          description: "Free-text audience descriptor, e.g. 'at-risk customers', 'dormant', 'vip', 'all'.",
+        },
+        message: {
+          type: "string",
+          description: "Body. Mustache-lite merge tags supported: {{name}}, {{shop}}, {{coupon}}, {{expires}}.",
+        },
+        scheduled_for: {
+          type: "string",
+          description: "ISO datetime (e.g. '2026-05-28T18:00:00Z'). Convert relative times ('tomorrow 6pm') to ISO before calling.",
+        },
+        subject: { type: "string", description: "Email subject line. Required when channel='email'." },
+        cta_label: { type: "string", description: "Optional CTA button label." },
+        cta_url: { type: "string", description: "Optional CTA target URL." },
       },
       required: ["channel", "audience", "message", "scheduled_for"],
       additionalProperties: false,
     },
     run: async (args, ctx) => {
-      const a = args as { channel: CampaignChannel; audience: string; message: string; scheduled_for: string };
-      return addCampaign(ctx.email, {
+      const a = args as {
+        channel: CampaignChannel;
+        audience: string;
+        message: string;
+        scheduled_for: string;
+        subject?: string;
+        cta_label?: string;
+        cta_url?: string;
+      };
+      if (a.channel === "email" && !a.subject) {
+        return { error: "subject is required when channel='email'." };
+      }
+      const created = await addCampaign(ctx.email, {
         channel: a.channel,
         audience: a.audience,
         message: a.message,
         scheduledFor: a.scheduled_for,
+        subject: a.subject,
+        ctaLabel: a.cta_label,
+        ctaUrl: a.cta_url,
       });
+      // Tell the model whether the send path is actually configured so it can
+      // warn the user immediately if a key step is missing.
+      const sendConfigured = a.channel !== "email" || emailConfigured();
+      return {
+        ...created,
+        send_configured: sendConfigured,
+        note: sendConfigured
+          ? a.channel === "email"
+            ? "Email campaign scheduled. The cron worker will send it at the scheduled time."
+            : "Recorded. Sending on non-email channels is not wired up yet."
+          : "Email campaign scheduled, BUT the email provider is not configured (RESEND_API_KEY / FROM_EMAIL). Nothing will actually go out until those are set.",
+      };
     },
   },
   {
     name: "list_recent_campaigns",
-    description: "List recently scheduled campaigns for the signed-in shop.",
+    description: "List recently scheduled campaigns for the signed-in shop, with their current status and stats.",
     parameters: {
       type: "object",
       properties: { limit: { type: "number", description: "default 10, max 50" } },
@@ -305,6 +373,86 @@ export const TOOLS: Tool[] = [
       const n = limit((args as { limit?: number }).limit, 10, 50);
       const all = await listCampaigns(ctx.email);
       return all.slice(0, n);
+    },
+  },
+  {
+    name: "get_campaign_status",
+    description: "Get the current status and stats of a specific campaign by id (use list_recent_campaigns to find ids).",
+    parameters: {
+      type: "object",
+      properties: { campaign_id: { type: "string" } },
+      required: ["campaign_id"],
+      additionalProperties: false,
+    },
+    run: async (args, ctx) => {
+      const a = args as { campaign_id: string };
+      const c = await getCampaign(ctx.email, a.campaign_id);
+      if (!c) return { error: "Campaign not found." };
+      return c;
+    },
+  },
+  {
+    name: "cancel_campaign",
+    description:
+      "Cancel a scheduled campaign. Has no effect if the campaign already finished. The cron worker checks status before sending.",
+    parameters: {
+      type: "object",
+      properties: { campaign_id: { type: "string" } },
+      required: ["campaign_id"],
+      additionalProperties: false,
+    },
+    run: async (args, ctx) => {
+      const a = args as { campaign_id: string };
+      const c = await getCampaign(ctx.email, a.campaign_id);
+      if (!c) return { error: "Campaign not found." };
+      if (c.status === "sent" || c.status === "partial" || c.status === "failed") {
+        return { error: `Campaign already ${c.status}; nothing to cancel.` };
+      }
+      const updated = await updateCampaign(ctx.email, a.campaign_id, { status: "cancelled" });
+      await dequeueDue({ accountEmail: ctx.email, campaignId: a.campaign_id, scheduledFor: c.scheduledFor });
+      return updated ?? { ok: true };
+    },
+  },
+  {
+    name: "set_subscriber_consent",
+    description:
+      "Manually opt a specific customer in (true) or out (false) of email marketing. Use sparingly; the public unsubscribe link in every email is the normal opt-out path.",
+    parameters: {
+      type: "object",
+      properties: {
+        customer_id: { type: "string" },
+        opted_in: { type: "boolean" },
+      },
+      required: ["customer_id", "opted_in"],
+      additionalProperties: false,
+    },
+    run: async (args, ctx) => {
+      const a = args as { customer_id: string; opted_in: boolean };
+      return setCustomerSubscribed(ctx.email, a.customer_id, a.opted_in);
+    },
+  },
+  {
+    name: "list_subscribers",
+    description:
+      "List opted-in customers (with email) for a given audience descriptor — i.e. who would actually receive an email campaign if scheduled right now. Use this before scheduling so the user knows the reach.",
+    parameters: {
+      type: "object",
+      properties: {
+        audience: { type: "string", description: "Free-text descriptor: 'all', 'vip', 'dormant', 'at-risk', etc." },
+        limit: { type: "number", description: "default 25, max 200" },
+      },
+      required: ["audience"],
+      additionalProperties: false,
+    },
+    run: async (args) => {
+      const a = args as { audience: string; limit?: number };
+      const n = limit(a.limit, 25, 200);
+      const resolved = resolveAudience(a.audience);
+      return {
+        segment: resolved.segment,
+        ...resolved.stats,
+        sample: resolved.recipients.slice(0, n),
+      };
     },
   },
 ];

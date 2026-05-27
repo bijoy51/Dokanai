@@ -23,6 +23,14 @@ export interface Customer {
   city: string;
   joinedAt: string;
   preferredLang: "bn" | "en";
+  /** Optional email — only customers with a non-empty email AND
+   *  subscribed=true are eligible recipients for email campaigns. */
+  email?: string;
+  /** Email-marketing opt-in. Defaults to false on import (no email sent
+   *  unless the CSV explicitly opts the customer in). Unsubscribes flip
+   *  this to false and set unsubscribedAt. */
+  subscribed?: boolean;
+  unsubscribedAt?: string;
 }
 
 export interface OrderItem {

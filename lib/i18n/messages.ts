@@ -49,6 +49,13 @@ const en: Dict = {
   "pilot.usedTools": "Used",
   "pilot.chatGone": "That chat is no longer available. Starting a fresh one.",
 
+  // unsubscribe page (public)
+  "unsub.title": "Unsubscribe",
+  "unsub.subtitle": "We're processing your request.",
+  "unsub.processing": "Unsubscribing…",
+  "unsub.done": "You have been unsubscribed. You won't receive any more marketing emails from this shop.",
+  "unsub.failed": "We couldn't process this unsubscribe link.",
+
   // overview
   "overview.title": "Business Overview",
   "overview.subtitle": "Last 30 days, with festival-driven trends.",
@@ -324,6 +331,13 @@ const bn: Dict = {
   "pilot.send": "পাঠাও",
   "pilot.usedTools": "ব্যবহার করেছে",
   "pilot.chatGone": "এই চ্যাটটি আর পাওয়া যাচ্ছে না। নতুন একটি চ্যাট শুরু করছি।",
+
+  // unsubscribe page (public)
+  "unsub.title": "আনসাবস্ক্রাইব",
+  "unsub.subtitle": "আপনার অনুরোধ প্রক্রিয়াকরণ চলছে।",
+  "unsub.processing": "আনসাবস্ক্রাইব করা হচ্ছে…",
+  "unsub.done": "আপনি আনসাবস্ক্রাইব হয়েছেন। এই দোকান থেকে আর কোনো মার্কেটিং ইমেল আসবে না।",
+  "unsub.failed": "এই আনসাবস্ক্রাইব লিংকটি প্রক্রিয়া করা যায়নি।",
 
   "overview.title": "ব্যবসা ওভারভিউ",
   "overview.subtitle": "গত ৩০ দিন, উৎসব-চালিত ট্রেন্ডসহ।",

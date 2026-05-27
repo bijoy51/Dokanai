@@ -102,6 +102,11 @@ export interface RawSale {
   payment?: string;
   status?: string;
   city?: string;
+  /** Optional customer email — enables email-marketing campaigns. */
+  email?: string;
+  /** Optional marketing opt-in: "true" / "yes" / "1" enable it. Anything
+   *  else (or missing) leaves the customer unsubscribed by default. */
+  consent?: string;
 }
 
 const KNOWN_CATEGORIES: ProductCategory[] = ["clothing", "electronics", "beauty", "food", "home"];
@@ -123,6 +128,18 @@ function coerceStatus(s: string | undefined): DeliveryStatus {
 function coercePayment(p: string | undefined): Order["paymentMethod"] {
   const v = (p ?? "").trim().toLowerCase();
   return (KNOWN_PAYMENT as readonly string[]).includes(v) ? (v as Order["paymentMethod"]) : "cod";
+}
+
+const TRUTHY_CONSENT = new Set(["true", "yes", "y", "1", "opted_in", "opt-in", "subscribed", "subscribe"]);
+/** Permissive consent parser. Anything not explicitly truthy is treated as
+ *  NOT opted in — defaults err on the side of not emailing without consent. */
+function isConsented(v: string | undefined): boolean {
+  if (!v) return false;
+  return TRUTHY_CONSENT.has(v.trim().toLowerCase());
+}
+/** Email validation kept intentionally permissive (RFC-ish, not strict). */
+function isValidEmail(e: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 }
 
 /**
@@ -173,13 +190,25 @@ export function buildDataset(rawProducts: RawProduct[], rawSales: RawSale[]): Da
   const WALK_IN_ID = "c0000";
   let usedWalkIn = false;
 
-  const addCustomer = (name: string, city: string, joinedAt: string): Customer => {
+  const addCustomer = (
+    name: string,
+    city: string,
+    joinedAt: string,
+    email?: string,
+    consent?: string,
+  ): Customer => {
     const key = name.trim().toLowerCase();
     const existing = customerByName.get(key);
     if (existing) {
       if (joinedAt && joinedAt < existing.joinedAt) existing.joinedAt = joinedAt;
+      // Enrich with email/consent if a later row supplies them.
+      if (email && !existing.email) existing.email = email.trim().toLowerCase();
+      if (consent && existing.subscribed !== true) {
+        existing.subscribed = isConsented(consent);
+      }
       return existing;
     }
+    const e = email?.trim().toLowerCase();
     const c: Customer = {
       id: `c${String(customers.length + 1).padStart(4, "0")}`,
       name: name.trim(),
@@ -187,6 +216,9 @@ export function buildDataset(rawProducts: RawProduct[], rawSales: RawSale[]): Da
       city: city || "Unknown",
       joinedAt: joinedAt || new Date().toISOString().slice(0, 10),
       preferredLang: "bn",
+      ...(e && isValidEmail(e) ? { email: e } : {}),
+      // Default: NOT subscribed. Only opt in when consent column says so.
+      subscribed: isConsented(consent),
     };
     customers.push(c);
     customerByName.set(key, c);
@@ -203,7 +235,7 @@ export function buildDataset(rawProducts: RawProduct[], rawSales: RawSale[]): Da
     const cname = (s.customer ?? "").trim();
     let customerId = WALK_IN_ID;
     if (cname) {
-      customerId = addCustomer(cname, (s.city ?? "").trim(), date).id;
+      customerId = addCustomer(cname, (s.city ?? "").trim(), date, s.email, s.consent).id;
     } else {
       usedWalkIn = true;
     }
