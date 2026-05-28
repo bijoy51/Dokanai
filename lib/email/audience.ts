@@ -12,6 +12,7 @@
  */
 import { getStore } from "@/lib/data/store";
 import { rfmScores, type Segment } from "@/lib/ai/churn";
+import { pendingCodRisks } from "@/lib/ai/rto";
 import type { Customer } from "@/lib/types";
 
 export interface Recipient {
@@ -21,17 +22,27 @@ export interface Recipient {
   locale: "en" | "bn";
 }
 
+/** Audience kinds the resolver can produce. "rto" is not an RFM segment — it
+ *  is the set of customers tied to a pending COD order at medium or high RTO
+ *  risk (computed by lib/ai/rto.pendingCodRisks). */
+export type AudienceKind = Segment | "all" | "rto";
+
 const SEGMENT_KEYWORDS: Record<Segment, string[]> = {
-  atrisk: ["at-risk", "at risk", "atrisk", "risky", "risk"],
+  atrisk: ["at-risk", "at risk", "atrisk", "risky"],
   dormant: ["dormant", "inactive", "winback", "win-back", "lapsed"],
   vip: ["vip", "top customer", "best customer", "loyal high"],
   loyal: ["loyal"],
   new: ["new"],
 };
 
+// "rto" must be checked BEFORE the atrisk keyword "risk" so an explicit
+// "rto risk" descriptor doesn't get classified as RFM at-risk.
+const RTO_KEYWORDS = ["rto", "rto risk", "rto-risk", "return-to-origin", "return to origin", "cod risk", "cod-risk"];
+
 /** Heuristic: pick the first segment whose keyword appears in the descriptor. */
-function detectSegment(descriptor: string): Segment | "all" {
+function detectSegment(descriptor: string): AudienceKind {
   const d = descriptor.toLowerCase();
+  if (RTO_KEYWORDS.some((kw) => d.includes(kw))) return "rto";
   for (const seg of Object.keys(SEGMENT_KEYWORDS) as Segment[]) {
     if (SEGMENT_KEYWORDS[seg].some((kw) => d.includes(kw))) return seg;
   }
@@ -50,7 +61,7 @@ function eligible(c: Customer): boolean {
 }
 
 export interface ResolveResult {
-  segment: Segment | "all";
+  segment: AudienceKind;
   /** Recipients that will actually receive the email. */
   recipients: Recipient[];
   /** Diagnostics so the cron worker can log a one-line summary. */
@@ -73,6 +84,15 @@ export function resolveAudience(descriptor: string): ResolveResult {
   let inAudience: Customer[];
   if (seg === "all") {
     inAudience = store.customers;
+  } else if (seg === "rto") {
+    // Customers tied to a pending COD order at medium or high RTO risk.
+    const risky = pendingCodRisks().filter((r) => r.riskLevel !== "low");
+    const ids = new Set<string>();
+    for (const order of store.orders) {
+      if (!risky.some((r) => r.orderId === order.id)) continue;
+      ids.add(order.customerId);
+    }
+    inAudience = store.customers.filter((c) => ids.has(c.id));
   } else {
     const segIds = new Set(rfmScores().filter((s) => s.segment === seg).map((s) => s.customerId));
     inAudience = store.customers.filter((c) => segIds.has(c.id));

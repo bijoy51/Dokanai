@@ -1,34 +1,8 @@
 import Link from "next/link";
 import { LangSwitcher } from "./LangSwitcher";
 import { LogoutButton } from "./LogoutButton";
+import { DashboardNav } from "./DashboardNav";
 import { t, type Locale } from "@/lib/i18n/messages";
-import {
-  BarChart3,
-  Bot,
-  LayoutDashboard,
-  TrendingUp,
-  Tag,
-  Sparkles,
-  Megaphone,
-  Users,
-  Mic,
-  ShieldAlert,
-  UploadCloud,
-} from "lucide-react";
-
-const links = [
-  { key: "nav.overview", href: "/dashboard", icon: LayoutDashboard },
-  { key: "nav.pilot", href: "/dashboard/agent", icon: Bot },
-  { key: "nav.analyze", href: "/dashboard/analyze", icon: BarChart3 },
-  { key: "nav.forecast", href: "/dashboard/forecast", icon: TrendingUp },
-  { key: "nav.pricing", href: "/dashboard/pricing", icon: Tag },
-  { key: "nav.recommendations", href: "/dashboard/recommendations", icon: Sparkles },
-  { key: "nav.marketing", href: "/dashboard/marketing", icon: Megaphone },
-  { key: "nav.customers", href: "/dashboard/customers", icon: Users },
-  { key: "nav.voice", href: "/dashboard/voice", icon: Mic },
-  { key: "nav.rto", href: "/dashboard/rto", icon: ShieldAlert },
-  { key: "nav.onboarding", href: "/dashboard/onboarding", icon: UploadCloud },
-];
 
 function shopLabel(userName?: string, userEmail?: string): string {
   if (userName) return userName;
@@ -68,18 +42,7 @@ export function DashboardShell({
             </div>
           </div>
         )}
-        <nav className="px-2 pb-4 grid grid-cols-3 gap-1 lg:flex lg:flex-col">
-          {links.map((l) => (
-            <Link
-              key={l.key}
-              href={`/${locale}${l.href}`}
-              className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100"
-            >
-              <l.icon className="w-4 h-4 text-slate-500" />
-              <span className="hidden lg:inline">{t(l.key, locale)}</span>
-            </Link>
-          ))}
-        </nav>
+        <DashboardNav locale={locale} />
       </aside>
 
       <div className="flex-1 min-w-0">
