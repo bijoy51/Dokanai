@@ -40,10 +40,41 @@ export function PilotClient({ locale }: { locale: Locale }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [showGreeting, setShowGreeting] = useState(true);
+  // Gates the initial chips below the greeting. Flips true after the
+  // greeting finishes typing; resets to false whenever the greeting is
+  // re-shown (new chat / clear).
+  const [greetingDone, setGreetingDone] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const scrollToBottom = () =>
+  // "Stick to bottom" mode: while true, new content auto-scrolls. The user
+  // can scroll up freely; this flips to false and the typing animation
+  // no longer drags them back. A ref (not state) so that the closure inside
+  // AssistantMarkdown's onTick reads the current value without re-renders.
+  const stickRef = useRef(true);
+
+  const scrollToBottom = () => {
+    if (!stickRef.current) return;
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior: "smooth" });
+  };
+
+  // Re-evaluate stick-mode on every manual scroll. ~80px slack accommodates
+  // the suggestion chip row that sits below the latest message.
+  const onScroll = () => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+
+  /** Fires when an assistant message finishes typing. Flips its `typed` flag
+   *  off so the follow-up chips become eligible to render. */
+  const markMessageTyped = (idx: number) => {
+    setMessages((prev) => {
+      if (!prev[idx] || prev[idx].typed === false) return prev;
+      const next = [...prev];
+      next[idx] = { ...next[idx], typed: false };
+      return next;
+    });
+  };
 
   // Load chat history sidebar on mount.
   useEffect(() => {
@@ -68,6 +99,8 @@ export function PilotClient({ locale }: { locale: Locale }) {
     setCurrentChatId(null);
     setMessages([]);
     setShowGreeting(true);
+    setGreetingDone(false);
+    stickRef.current = true;
     setError("");
     setInput("");
     setTimeout(() => inputRef.current?.focus(), 0);
@@ -115,6 +148,9 @@ export function PilotClient({ locale }: { locale: Locale }) {
     setError("");
     setShowGreeting(false);
     setInput("");
+    // User action -> re-stick to bottom so the new reply scrolls in even if
+    // they had scrolled up earlier.
+    stickRef.current = true;
     const userMsg: ChatMessageUi = { role: "user", content: msg };
     setMessages((m) => [...m, userMsg]);
     setSending(true);
@@ -203,32 +239,45 @@ export function PilotClient({ locale }: { locale: Locale }) {
         </div>
 
         {/* messages */}
-        <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-slate-50/40">
+        <div
+          ref={scrollerRef}
+          onScroll={onScroll}
+          className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-slate-50/40"
+        >
           {showGreeting && messages.length === 0 && (
             <>
-              <Greeting locale={locale} />
-              {/* Initial starter chips below the greeting — Gemini-style. */}
-              <div className="ml-9">
-                <SuggestionChips
-                  variant="initial"
-                  suggestions={getInitialSuggestions(locale)}
-                  onPick={(p) => void send(p)}
-                  locale={locale}
-                />
-              </div>
+              <Greeting locale={locale} onDone={() => setGreetingDone(true)} />
+              {/* Initial starter chips appear only AFTER the greeting has
+                  finished typing — keeps the welcome moment uncluttered. */}
+              {greetingDone && (
+                <div className="ml-9">
+                  <SuggestionChips
+                    variant="initial"
+                    suggestions={getInitialSuggestions(locale)}
+                    onPick={(p) => void send(p)}
+                    locale={locale}
+                  />
+                </div>
+              )}
             </>
           )}
 
           {messages.map((m, i) => {
             const isLastAssistant =
               m.role === "assistant" && !sending && i === messages.length - 1;
+            // Follow-up chips wait for typing to complete (m.typed flips to
+            // false via the onTypingDone callback) so they don't pop in
+            // beside half-written sentences.
+            const showFollowUps = isLastAssistant && !m.typed;
             return (
               <div key={i}>
-                <MessageBubble msg={m} locale={locale} onTick={scrollToBottom} />
-                {isLastAssistant && (
-                  // Context-aware follow-ups only for the latest assistant
-                  // turn — earlier turns' chips would be stale once the user
-                  // has moved on.
+                <MessageBubble
+                  msg={m}
+                  locale={locale}
+                  onTick={scrollToBottom}
+                  onTypingDone={m.role === "assistant" ? () => markMessageTyped(i) : undefined}
+                />
+                {showFollowUps && (
                   <div className="ml-9 mt-2">
                     <SuggestionChips
                       variant="follow-up"
@@ -296,7 +345,7 @@ export function PilotClient({ locale }: { locale: Locale }) {
   );
 }
 
-function Greeting({ locale }: { locale: Locale }) {
+function Greeting({ locale, onDone }: { locale: Locale; onDone?: () => void }) {
   const [step, setStep] = useState<0 | 1>(0);
   const line1 = `Hi, I am ${NICKNAME}.`;
   const line2 =
@@ -312,7 +361,7 @@ function Greeting({ locale }: { locale: Locale }) {
         </div>
         {step === 1 && (
           <div className="mt-1">
-            <TypingText text={line2} />
+            <TypingText text={line2} onDone={onDone} />
           </div>
         )}
       </div>
@@ -324,10 +373,12 @@ function MessageBubble({
   msg,
   locale,
   onTick,
+  onTypingDone,
 }: {
   msg: ChatMessageUi;
   locale: Locale;
   onTick?: () => void;
+  onTypingDone?: () => void;
 }) {
   const isUser = msg.role === "user";
   return (
@@ -343,7 +394,7 @@ function MessageBubble({
         {isUser ? (
           msg.content
         ) : (
-          <AssistantMarkdown content={msg.content} typed={!!msg.typed} onTick={onTick} />
+          <AssistantMarkdown content={msg.content} typed={!!msg.typed} onTick={onTick} onTypingDone={onTypingDone} />
         )}
         {!isUser && msg.toolNames && msg.toolNames.length > 0 && (
           <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-1 flex-wrap border-t border-slate-100 pt-1.5">
@@ -367,21 +418,29 @@ function AssistantMarkdown({
   content,
   typed,
   onTick,
+  onTypingDone,
 }: {
   content: string;
   typed: boolean;
   onTick?: () => void;
+  /** Fires once when the typing animation reaches the end of the content
+   *  (or immediately if `typed` is false / reduced-motion is set). The
+   *  parent uses it to gate follow-up suggestion chips so they don't
+   *  appear mid-stream. */
+  onTypingDone?: () => void;
 }) {
   const [shown, setShown] = useState(typed ? "" : content);
   useEffect(() => {
     if (!typed) {
       setShown(content);
+      onTypingDone?.();
       return;
     }
     const reduced =
       typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
       setShown(content);
+      onTypingDone?.();
       return;
     }
     setShown("");
@@ -390,7 +449,10 @@ function AssistantMarkdown({
       i += 1;
       setShown(content.slice(0, i));
       onTick?.();
-      if (i >= content.length) clearInterval(id);
+      if (i >= content.length) {
+        clearInterval(id);
+        onTypingDone?.();
+      }
     }, 25);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
