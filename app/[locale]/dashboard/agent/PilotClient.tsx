@@ -8,13 +8,13 @@ import {
   Loader2,
   MessageSquarePlus,
   Send,
-  Sparkles,
   Trash2,
   User as UserIcon,
   Wrench,
 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { TypingText } from "./TypingText";
+import { SuggestionChips, getInitialSuggestions, getFollowUpSuggestions } from "./Suggestions";
 
 const NICKNAME = "Pilot";
 
@@ -30,50 +30,6 @@ interface ChatMessageUi {
    *  history messages should be false so they appear instantly. */
   typed?: boolean;
   toolNames?: string[];
-}
-
-interface ReadyPrompt {
-  key: string;
-  label: string;
-  prompt: string;
-}
-
-function readyPrompts(locale: Locale): ReadyPrompt[] {
-  // Send the actual prompt to the model in English so the tools fire reliably,
-  // but show a localised label on the button.
-  const isBn = locale === "bn";
-  return [
-    {
-      key: "at-risk",
-      label: isBn ? "ঝুঁকিতে থাকা কাস্টমার দেখাও" : "Who is at risk?",
-      prompt: "List my at-risk customers with their last order date and total spend.",
-    },
-    {
-      key: "top-products",
-      label: isBn ? "টপ ৫ প্রোডাক্ট" : "Top 5 products this month",
-      prompt: "Show my top 5 products by units sold in the last 30 days.",
-    },
-    {
-      key: "low-stock",
-      label: isBn ? "কম স্টক প্রোডাক্ট" : "Low-stock alerts",
-      prompt: "Which products will run out soon? Show days-of-stock.",
-    },
-    {
-      key: "pricing",
-      label: isBn ? "প্রাইসিং পরামর্শ" : "Pricing suggestions",
-      prompt: "Suggest pricing changes for my products.",
-    },
-    {
-      key: "winback",
-      label: isBn ? "Dormant customer winback draft" : "Draft a winback WhatsApp",
-      prompt: "Draft a WhatsApp winback message for my dormant customers, then ask me when to schedule it.",
-    },
-    {
-      key: "rto",
-      label: isBn ? "RTO ঝুঁকি অর্ডার" : "RTO risk orders",
-      prompt: "List my highest-risk pending COD orders and how much loss they could cause.",
-    },
-  ];
 }
 
 export function PilotClient({ locale }: { locale: Locale }) {
@@ -244,20 +200,47 @@ export function PilotClient({ locale }: { locale: Locale }) {
               <div className="text-[11px] text-slate-500 mt-0.5">{t("pilot.expertTagline", locale)}</div>
             </div>
           </div>
-          <ReadyPromptsMenu
-            prompts={readyPrompts(locale)}
-            onPick={(p) => setInput(p.prompt)}
-            label={t("pilot.readyPrompts", locale)}
-          />
         </div>
 
         {/* messages */}
         <div ref={scrollerRef} className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-slate-50/40">
-          {showGreeting && messages.length === 0 && <Greeting locale={locale} />}
+          {showGreeting && messages.length === 0 && (
+            <>
+              <Greeting locale={locale} />
+              {/* Initial starter chips below the greeting — Gemini-style. */}
+              <div className="ml-9">
+                <SuggestionChips
+                  variant="initial"
+                  suggestions={getInitialSuggestions(locale)}
+                  onPick={(p) => void send(p)}
+                  locale={locale}
+                />
+              </div>
+            </>
+          )}
 
-          {messages.map((m, i) => (
-            <MessageBubble key={i} msg={m} locale={locale} onTick={scrollToBottom} />
-          ))}
+          {messages.map((m, i) => {
+            const isLastAssistant =
+              m.role === "assistant" && !sending && i === messages.length - 1;
+            return (
+              <div key={i}>
+                <MessageBubble msg={m} locale={locale} onTick={scrollToBottom} />
+                {isLastAssistant && (
+                  // Context-aware follow-ups only for the latest assistant
+                  // turn — earlier turns' chips would be stale once the user
+                  // has moved on.
+                  <div className="ml-9 mt-2">
+                    <SuggestionChips
+                      variant="follow-up"
+                      suggestions={getFollowUpSuggestions(m.content, locale)}
+                      onPick={(p) => void send(p)}
+                      locale={locale}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           {sending && (
             <div className="flex items-start gap-2">
@@ -476,41 +459,3 @@ function Avatar({ role }: { role: "user" | "assistant" }) {
   );
 }
 
-function ReadyPromptsMenu({
-  prompts,
-  onPick,
-  label,
-}: {
-  prompts: ReadyPrompt[];
-  onPick: (p: ReadyPrompt) => void;
-  label: string;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 text-sm text-slate-700 border border-slate-300 hover:bg-slate-50 rounded-md px-3 py-1.5"
-      >
-        <Sparkles className="w-4 h-4 text-brand-600" />
-        {label}
-      </button>
-      {open && (
-        <div className="absolute right-0 mt-1 w-72 rounded-md border border-slate-200 bg-white shadow-lg z-10">
-          {prompts.map((p) => (
-            <button
-              key={p.key}
-              onClick={() => {
-                onPick(p);
-                setOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 border-b last:border-b-0 border-slate-100"
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

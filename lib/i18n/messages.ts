@@ -48,6 +48,8 @@ const en: Dict = {
   "pilot.send": "Send",
   "pilot.usedTools": "Used",
   "pilot.chatGone": "That chat is no longer available. Starting a fresh one.",
+  "pilot.tryOneOfThese": "Not sure what to ask? Try one:",
+  "pilot.orTry": "Or try:",
 
   // unsubscribe page (public)
   "unsub.title": "Unsubscribe",
@@ -358,6 +360,8 @@ const bn: Dict = {
   "pilot.send": "পাঠাও",
   "pilot.usedTools": "ব্যবহার করেছে",
   "pilot.chatGone": "এই চ্যাটটি আর পাওয়া যাচ্ছে না। নতুন একটি চ্যাট শুরু করছি।",
+  "pilot.tryOneOfThese": "কী জিজ্ঞেস করবেন বুঝছেন না? একটি বেছে নিন:",
+  "pilot.orTry": "অথবা চেষ্টা করুন:",
 
   // unsubscribe page (public)
   "unsub.title": "আনসাবস্ক্রাইব",
