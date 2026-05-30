@@ -53,15 +53,21 @@ export function SuggestionChips({
         <Sparkles className="w-3 h-3" />
         {variant === "initial" ? t("pilot.tryOneOfThese", locale) : t("pilot.orTry", locale)}
       </div>
-      <div className={isVertical ? "flex flex-col gap-2 items-start" : "flex flex-wrap gap-2"}>
+      <div className={isVertical ? "flex flex-col gap-1.5 items-stretch" : "flex flex-wrap gap-2"}>
         {suggestions.map((s) => (
           <button
             key={s.key}
             type="button"
             onClick={() => onPick(s.prompt)}
             className={
-              "text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 rounded-full px-3 py-1.5 transition-colors " +
-              (isVertical ? "text-left" : "whitespace-nowrap")
+              // transparent background + border on both layouts; the only
+              // difference is shape (rounded-lg + full-width text-left when
+              // stacked in a narrow rail; rounded-full pill when laid out
+              // horizontally in the sticky bar).
+              "text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 transition-colors " +
+              (isVertical
+                ? "rounded-lg px-3 py-1.5 text-left w-full"
+                : "rounded-full px-3 py-1.5 whitespace-nowrap")
             }
           >
             {s.label}

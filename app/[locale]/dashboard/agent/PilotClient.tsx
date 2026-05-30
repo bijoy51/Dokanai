@@ -197,11 +197,27 @@ export function PilotClient({ locale }: { locale: Locale }) {
           <MessageSquarePlus className="w-4 h-4" />
           {t("pilot.newChat", locale)}
         </button>
-        <div className="px-3 pb-2 text-[10px] uppercase tracking-wide text-slate-500">{t("pilot.history", locale)}</div>
-        <div className="flex-1 overflow-y-auto px-2 pb-3 space-y-1">
-          {history.length === 0 && (
-            <div className="text-xs text-slate-400 px-2 py-3">{t("pilot.noHistory", locale)}</div>
+        <div className="flex-1 overflow-y-auto px-3 pb-3">
+          {/* Starter suggestions live in the LEFT rail when the chat is
+              empty — moved here from the chat area per spec. They disappear
+              the moment a conversation starts, freeing the rail for chat
+              history. The HISTORY label below renders unconditionally. */}
+          {showGreeting && messages.length === 0 && (
+            <div className="mb-4">
+              <SuggestionChips
+                variant="initial"
+                layout="vertical"
+                suggestions={getInitialSuggestions(locale)}
+                onPick={(p) => void send(p)}
+                locale={locale}
+              />
+            </div>
           )}
+          <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-2">{t("pilot.history", locale)}</div>
+          {history.length === 0 && (
+            <div className="text-xs text-slate-400 px-1 py-2">{t("pilot.noHistory", locale)}</div>
+          )}
+          <div className="space-y-1">
           {history.map((c) => (
             <button
               key={c.id}
@@ -220,6 +236,7 @@ export function PilotClient({ locale }: { locale: Locale }) {
               </span>
             </button>
           ))}
+          </div>
         </div>
       </aside>
 
@@ -245,24 +262,9 @@ export function PilotClient({ locale }: { locale: Locale }) {
           className="flex-1 overflow-y-auto px-4 py-5 space-y-4 bg-slate-50/40"
         >
           {showGreeting && messages.length === 0 && (
-            <>
-              <Greeting locale={locale} onDone={() => setGreetingDone(true)} />
-              {/* Initial starter chips appear only AFTER the greeting has
-                  finished typing — keeps the welcome moment uncluttered.
-                  Vertical layout fills the empty space tidily, one chip
-                  per row. */}
-              {greetingDone && (
-                <div className="ml-9 mt-2">
-                  <SuggestionChips
-                    variant="initial"
-                    layout="vertical"
-                    suggestions={getInitialSuggestions(locale)}
-                    onPick={(p) => void send(p)}
-                    locale={locale}
-                  />
-                </div>
-              )}
-            </>
+            // Starter chips moved to the left rail (see <aside> above). The
+            // chat area shows just the greeting in the empty state.
+            <Greeting locale={locale} onDone={() => setGreetingDone(true)} />
           )}
 
           {messages.map((m, i) => (
