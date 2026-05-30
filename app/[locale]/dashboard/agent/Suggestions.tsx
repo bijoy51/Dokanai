@@ -33,26 +33,36 @@ export function SuggestionChips({
   onPick,
   locale,
   variant = "follow-up",
+  layout = "horizontal",
 }: {
   suggestions: Suggestion[];
   onPick: (prompt: string) => void;
   locale: Locale;
   variant?: "initial" | "follow-up";
+  /** vertical = stacked (one chip per row, full-width, aligned-start) — used
+   *  for the empty-chat initial state so the greeting card is followed by
+   *  a tidy option list. horizontal = flex-wrap pills — used for the sticky
+   *  bar above the input where space is limited. */
+  layout?: "vertical" | "horizontal";
 }) {
   if (suggestions.length === 0) return null;
+  const isVertical = layout === "vertical";
   return (
-    <div className="mt-2 flex flex-col gap-1.5">
+    <div className={"flex flex-col " + (isVertical ? "gap-2" : "gap-1.5")}>
       <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
         <Sparkles className="w-3 h-3" />
         {variant === "initial" ? t("pilot.tryOneOfThese", locale) : t("pilot.orTry", locale)}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className={isVertical ? "flex flex-col gap-2 items-start" : "flex flex-wrap gap-2"}>
         {suggestions.map((s) => (
           <button
             key={s.key}
             type="button"
             onClick={() => onPick(s.prompt)}
-            className="text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 rounded-full px-3 py-1 transition-colors whitespace-nowrap"
+            className={
+              "text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 rounded-full px-3 py-1.5 transition-colors " +
+              (isVertical ? "text-left" : "whitespace-nowrap")
+            }
           >
             {s.label}
           </button>

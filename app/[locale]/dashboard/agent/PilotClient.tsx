@@ -248,11 +248,14 @@ export function PilotClient({ locale }: { locale: Locale }) {
             <>
               <Greeting locale={locale} onDone={() => setGreetingDone(true)} />
               {/* Initial starter chips appear only AFTER the greeting has
-                  finished typing — keeps the welcome moment uncluttered. */}
+                  finished typing — keeps the welcome moment uncluttered.
+                  Vertical layout fills the empty space tidily, one chip
+                  per row. */}
               {greetingDone && (
-                <div className="ml-9">
+                <div className="ml-9 mt-2">
                   <SuggestionChips
                     variant="initial"
+                    layout="vertical"
                     suggestions={getInitialSuggestions(locale)}
                     onPick={(p) => void send(p)}
                     locale={locale}
@@ -262,34 +265,15 @@ export function PilotClient({ locale }: { locale: Locale }) {
             </>
           )}
 
-          {messages.map((m, i) => {
-            const isLastAssistant =
-              m.role === "assistant" && !sending && i === messages.length - 1;
-            // Follow-up chips wait for typing to complete (m.typed flips to
-            // false via the onTypingDone callback) so they don't pop in
-            // beside half-written sentences.
-            const showFollowUps = isLastAssistant && !m.typed;
-            return (
-              <div key={i}>
-                <MessageBubble
-                  msg={m}
-                  locale={locale}
-                  onTick={scrollToBottom}
-                  onTypingDone={m.role === "assistant" ? () => markMessageTyped(i) : undefined}
-                />
-                {showFollowUps && (
-                  <div className="ml-9 mt-2">
-                    <SuggestionChips
-                      variant="follow-up"
-                      suggestions={getFollowUpSuggestions(m.content, locale)}
-                      onPick={(p) => void send(p)}
-                      locale={locale}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {messages.map((m, i) => (
+            <MessageBubble
+              key={i}
+              msg={m}
+              locale={locale}
+              onTick={scrollToBottom}
+              onTypingDone={m.role === "assistant" ? () => markMessageTyped(i) : undefined}
+            />
+          ))}
 
           {sending && (
             <div className="flex items-start gap-2">
@@ -307,6 +291,26 @@ export function PilotClient({ locale }: { locale: Locale }) {
             </div>
           )}
         </div>
+
+        {/* sticky follow-up chips bar — sits between the scroller and the
+            input, so it stays visible while the user scrolls the messages
+            above. Only renders when the latest message is an assistant
+            reply that has finished typing. */}
+        {(() => {
+          const last = messages[messages.length - 1];
+          if (!last || last.role !== "assistant" || last.typed || sending) return null;
+          return (
+            <div className="border-t border-slate-100 bg-white px-4 py-2.5">
+              <SuggestionChips
+                variant="follow-up"
+                layout="horizontal"
+                suggestions={getFollowUpSuggestions(last.content, locale)}
+                onPick={(p) => void send(p)}
+                locale={locale}
+              />
+            </div>
+          );
+        })()}
 
         {/* input */}
         <form
