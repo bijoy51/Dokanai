@@ -53,21 +53,31 @@ export function SuggestionChips({
         <Sparkles className="w-3 h-3" />
         {variant === "initial" ? t("pilot.tryOneOfThese", locale) : t("pilot.orTry", locale)}
       </div>
-      <div className={isVertical ? "flex flex-col gap-1.5 items-stretch" : "flex flex-wrap gap-2"}>
+      <div
+        className={
+          isVertical
+            ? // Stacked, each chip sized to its label (NOT full-width).
+              // items-start keeps chips at content width so they look like
+              // the Gemini-style pills the screenshot referenced.
+              "flex flex-col gap-2 items-start"
+            : // Horizontal: scroll-on-overflow on mobile (single row, no stack);
+              // wrap on sm+ so chips form a tidy multi-row bar with room.
+              "flex gap-2 overflow-x-auto sm:flex-wrap -mx-0.5 px-0.5 " +
+              "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+        }
+      >
         {suggestions.map((s) => (
           <button
             key={s.key}
             type="button"
             onClick={() => onPick(s.prompt)}
             className={
-              // transparent background + border on both layouts; the only
-              // difference is shape (rounded-lg + full-width text-left when
-              // stacked in a narrow rail; rounded-full pill when laid out
-              // horizontally in the sticky bar).
-              "text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 transition-colors " +
-              (isVertical
-                ? "rounded-lg px-3 py-1.5 text-left w-full"
-                : "rounded-full px-3 py-1.5 whitespace-nowrap")
+              // Same rounded-full pill in both layouts — only the container
+              // direction differs. text-left in vertical so multi-word
+              // labels read naturally; horizontal stays single-row with
+              // shrink-0 so each chip keeps its native width.
+              "text-xs sm:text-sm bg-transparent text-slate-700 border border-slate-300 hover:border-brand-500 hover:text-brand-700 transition-colors rounded-full px-3 py-1.5 whitespace-nowrap " +
+              (isVertical ? "text-left" : "shrink-0")
             }
           >
             {s.label}
