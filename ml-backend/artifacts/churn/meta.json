@@ -1,0 +1,52 @@
+{
+  "feature_names": [
+    "recency_days",
+    "frequency_90d",
+    "monetary",
+    "avg_order_gap_days",
+    "tenure_days",
+    "cancel_rate",
+    "category_idx"
+  ],
+  "categories_ordered": [
+    "beauty",
+    "clothing",
+    "electronics",
+    "food",
+    "home"
+  ],
+  "category_thresholds": {
+    "food": {
+      "at_risk_days": 21,
+      "churned_days": 45
+    },
+    "electronics": {
+      "at_risk_days": 90,
+      "churned_days": 180
+    },
+    "beauty": {
+      "at_risk_days": 45,
+      "churned_days": 90
+    },
+    "clothing": {
+      "at_risk_days": 60,
+      "churned_days": 120
+    },
+    "home": {
+      "at_risk_days": 60,
+      "churned_days": 120
+    }
+  },
+  "metrics": {
+    "auroc": 0.9313,
+    "f1": 0.8068,
+    "train_rows": 40000,
+    "test_rows": 10000,
+    "positive_rate_test": 0.2553
+  },
+  "tier_cutoffs": {
+    "low_max": 0.33,
+    "medium_max": 0.66
+  },
+  "model_version": "churn-v1"
+}
