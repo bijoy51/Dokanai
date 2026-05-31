@@ -9,6 +9,7 @@ pydantic==2.9.2
 numpy==1.26.4
 scikit-learn==1.5.1
 xgboost==2.1.1
+shap==0.46.0
 joblib==1.4.2
 onnxruntime==1.18.1
 Pillow==10.4.0

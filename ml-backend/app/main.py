@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import churn as churn_predict
 from .pipeline import pipeline
 from .schemas import (
     AnalyzeShopRequest,
@@ -107,6 +108,37 @@ def trends(shop_type: str = "clothing") -> TrendsResponse:
         up=[TrendItem(**t) for t in data.get("up", [])],
         down=[TrendItem(**t) for t in data.get("down", [])],
     )
+
+
+# ---------- churn prediction ----------
+# Shared global XGBoost model + SHAP explainer trained by
+# training/churn_train.py. The frontend computes per-customer RFM
+# features (it already does this for the dashboard) and POSTs them
+# here for a calibrated probability + the top-3 reasons.
+
+@app.post("/predict/churn")
+async def predict_churn(request: Request, x_admin_secret: str = Header(default="")) -> dict:
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="invalid admin secret")
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="invalid JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="body must be a JSON object")
+    category = str(body.get("category", "clothing")).lower()
+    features = body.get("features") or {}
+    if not isinstance(features, dict):
+        raise HTTPException(status_code=400, detail="features must be an object")
+    return churn_predict.predict(category, features)
+
+
+@app.get("/predict/churn/info")
+def predict_churn_info() -> dict:
+    """Public diagnostic: is the model loaded? What are its metrics?
+    Helpful for the frontend to disable the Pilot tool gracefully when
+    the artifact hasn't been deployed yet."""
+    return churn_predict.model_info()
 
 
 # ---------- internal routes ----------

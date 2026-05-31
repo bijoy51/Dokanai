@@ -1,7 +1,46 @@
 import { getStore } from "@/lib/data/store";
 import { daysBetween } from "@/lib/utils";
+import type { ProductCategory } from "@/lib/types";
 
 export type Segment = "vip" | "loyal" | "atrisk" | "dormant" | "new";
+
+/**
+ * Per-category churn windows from the production architecture spec
+ * (PDF §2.3). The pattern is "no purchase in N days" → at-risk; "no
+ * purchase in M days" → churned. These are also the labels the XGBoost
+ * predictor in ml-backend was trained against, so frontend and backend
+ * agree on what "at-risk" means.
+ *
+ * These thresholds are READ-ONLY metadata — they don't change the
+ * existing rfmScores() output (which still uses its global buckets),
+ * so existing dashboards and the Pilot list_customers_by_segment tool
+ * continue to behave exactly as before. The thresholds are used by the
+ * ML-backed churn predictor (lib/ai/churn-ml.ts) and the new Pilot
+ * tool predict_churn_for_customer.
+ */
+export interface ChurnThresholds {
+  atRiskDays: number;
+  churnedDays: number;
+  keyDriver: string;
+}
+
+export const CATEGORY_CHURN_THRESHOLDS: Record<ProductCategory, ChurnThresholds> = {
+  food:        { atRiskDays: 21, churnedDays: 45,  keyDriver: "missed weekly shop" },
+  electronics: { atRiskDays: 90, churnedDays: 180, keyDriver: "upgrade cycle deviation" },
+  beauty:      { atRiskDays: 45, churnedDays: 90,  keyDriver: "restock cycle missed" },
+  clothing:    { atRiskDays: 60, churnedDays: 120, keyDriver: "seasonal window skipped" },
+  home:        { atRiskDays: 60, churnedDays: 120, keyDriver: "no repeat purchase" },
+};
+
+/** Fallback when the category isn't known — uses the clothing curve. */
+export const DEFAULT_CHURN_THRESHOLDS: ChurnThresholds = CATEGORY_CHURN_THRESHOLDS.clothing;
+
+export function thresholdsFor(category?: ProductCategory | string): ChurnThresholds {
+  if (category && (category as ProductCategory) in CATEGORY_CHURN_THRESHOLDS) {
+    return CATEGORY_CHURN_THRESHOLDS[category as ProductCategory];
+  }
+  return DEFAULT_CHURN_THRESHOLDS;
+}
 
 export interface CustomerScore {
   customerId: string;

@@ -28,6 +28,88 @@ uvicorn app.main:app --reload --port 8000
 
 Open http://localhost:8000/docs for the interactive Swagger UI.
 
+## Churn predictor — Windows quickstart (PowerShell)
+
+The `/predict/churn` endpoint serves an XGBoost classifier with SHAP
+explanations. To train it locally on Windows and verify it end-to-end:
+
+```powershell
+cd ml-backend
+
+# 1) Create + activate a venv (one-time)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 2) Install runtime + training deps
+pip install -r requirements.txt -r requirements-train.txt
+
+# 3) Train the model. Writes artifacts/churn/{model,explainer,meta}.* (~few seconds)
+python -m training.churn_train
+
+# 4) Run the backend
+$env:ADMIN_SECRET = "local-dev-secret"
+uvicorn app.main:app --reload --port 7860
+
+# 5) In a NEW PowerShell window, smoke-test the predict endpoint
+$body = @{
+  category = "clothing"
+  features = @{
+    recency_days       = 90
+    frequency_90d      = 1
+    monetary           = 1500
+    avg_order_gap_days = 60
+    tenure_days        = 200
+    cancel_rate        = 0.0
+  }
+} | ConvertTo-Json
+Invoke-RestMethod `
+  -Uri  http://localhost:7860/predict/churn `
+  -Method POST `
+  -Headers @{ "x-admin-secret" = "local-dev-secret" } `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+You should see a response with `churn_probability`, `risk_tier`, and a
+`top_drivers` list explaining which features pushed the prediction.
+
+### Wiring it to the Next.js frontend
+
+The frontend's Pilot agent has a tool `predict_churn_for_customer`
+([lib/agent/tools.ts](../lib/agent/tools.ts)) that calls this endpoint.
+For it to work, the Next.js app needs the same two env vars it already
+uses for the `/kv` store:
+
+| Env var (Next.js) | Value |
+|---|---|
+| `ML_BACKEND_URL` | `http://localhost:7860` for local, or your HF Space URL |
+| `ML_ADMIN_SECRET` | must equal this backend's `ADMIN_SECRET` |
+
+If either is missing, the Pilot tool gracefully returns
+`available: false` with a friendly reason — every other Pilot feature
+continues to work.
+
+### Deploying the model to the HF Space
+
+The artifact files in `artifacts/churn/` are needed at runtime. Options:
+
+1. **Commit + push** (simplest for hackathon scale; artifacts are
+   ~few MB):
+   ```powershell
+   git add artifacts/churn/*
+   git commit -m "Train churn-v1"
+   git subtree push --prefix ml-backend space main
+   ```
+
+2. **Train inside the Space** on startup by adding
+   `python -m training.churn_train` to `Dockerfile`'s CMD chain
+   (slower cold start, no LFS needed).
+
+Until artifacts exist on the Space, `/predict/churn` returns
+`{ready: false, error: "...run training/churn_train..."}` and the
+Pilot tool surfaces it as a friendly "not configured" message —
+nothing crashes.
+
 The service starts **with no trained models** and uses heuristic fallbacks, so every endpoint works immediately. Train the real models when you're ready (next section); the backend will pick them up the next time it starts.
 
 ## Endpoints

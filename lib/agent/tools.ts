@@ -13,6 +13,7 @@ import { rfmScores, segmentBreakdown, type Segment } from "@/lib/ai/churn";
 import { pendingCodRisks, rtoSummaryProjection } from "@/lib/ai/rto";
 import { priceRecommendations, bundleRecommendations } from "@/lib/ai/pricing";
 import { recommendForCustomer, customerSummaries } from "@/lib/ai/recommend";
+import { predictChurnForCustomer } from "@/lib/ai/churn-ml";
 import { forecastAll, dailyForecastTotal } from "@/lib/ai/forecast";
 import {
   audienceCount,
@@ -131,6 +132,23 @@ export const TOOLS: Tool[] = [
     run: (args) => {
       const a = args as { customer_id: string; limit?: number };
       return recommendForCustomer(a.customer_id, limit(a.limit, 6, 20));
+    },
+  },
+  {
+    name: "predict_churn_for_customer",
+    description:
+      "ML-backed churn prediction for ONE customer: returns a calibrated probability (0–1), a risk tier (low/medium/high), the category-specific churn windows, and the top-3 SHAP drivers explaining WHY the customer is at risk (e.g. 'recency_days=45 pushed risk up, monetary=12000 pushed it down'). Use this when the user asks 'why is this customer at risk' or 'how likely is X to churn'. Different from list_customers_by_segment (which is the rule-based RFM bucketing); this is the trained XGBoost model with explainability. If the ML backend is not configured / not trained, returns available=false with a clear reason.",
+    parameters: {
+      type: "object",
+      properties: {
+        customer_id: { type: "string", description: "From list_customers_by_segment / list_top_customers." },
+      },
+      required: ["customer_id"],
+      additionalProperties: false,
+    },
+    run: async (args, ctx) => {
+      const a = args as { customer_id: string };
+      return predictChurnForCustomer(ctx.email, a.customer_id);
     },
   },
 
