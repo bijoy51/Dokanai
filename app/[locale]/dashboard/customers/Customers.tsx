@@ -38,11 +38,11 @@ export default function CustomersPage({ params }: { params: { locale: string } }
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("ch.title", locale)}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("ch.title", locale)}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("ch.subtitle", locale)}</p>
       </header>
 
-      <section className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
         {(["vip", "loyal", "new", "atrisk", "dormant"] as const).map((seg) => {
           const s = summary.find((x) => x.segment === seg);
           const Icon = segIcon[seg];

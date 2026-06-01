@@ -87,7 +87,7 @@ export function MarketingComposer({
 
         <div>
           <label className="text-xs uppercase text-slate-500">{t("mkt.goal", locale)}</label>
-          <div className="mt-2 inline-flex border border-slate-200 rounded-md overflow-hidden text-sm">
+          <div className="mt-2 inline-flex flex-wrap border border-slate-200 rounded-md overflow-hidden text-sm max-w-full">
             {goalOptions.map((g, i) => (
               <button
                 key={g.value}
@@ -104,7 +104,7 @@ export function MarketingComposer({
 
         <div>
           <label className="text-xs uppercase text-slate-500">{t("mkt.channel", locale)}</label>
-          <div className="mt-2 inline-flex border border-slate-200 rounded-md overflow-hidden text-sm">
+          <div className="mt-2 inline-flex flex-wrap border border-slate-200 rounded-md overflow-hidden text-sm max-w-full">
             {channelOptions.map((c, i) => (
               <button
                 key={c.value}

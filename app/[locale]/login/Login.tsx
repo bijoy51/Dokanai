@@ -46,7 +46,7 @@ export default function Login({
   };
 
   return (
-    <main className="min-h-screen grid place-items-center bg-gradient-to-b from-brand-50 via-white to-white p-6">
+    <main className="min-h-screen grid place-items-center bg-gradient-to-b from-brand-50 via-white to-white p-4 sm:p-6">
       <div className="w-full max-w-sm">
         <Link href={`/${locale}`} className="flex items-center gap-2 justify-center mb-6">
           <div className="w-9 h-9 rounded-md bg-brand-600 grid place-items-center text-white font-bold">D</div>

@@ -24,16 +24,16 @@ export default function Home({ params }: { params: { locale: string } }) {
   ];
   return (
     <main className="min-h-screen bg-gradient-to-b from-brand-50 via-white to-white">
-      <header className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-md bg-brand-600 grid place-items-center text-white font-bold">D</div>
-          <span className="font-semibold">{t("brand.name", locale)}</span>
+      <header className="px-4 sm:px-6 py-4 flex items-center justify-between gap-3 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-md bg-brand-600 grid place-items-center text-white font-bold shrink-0">D</div>
+          <span className="font-semibold truncate">{t("brand.name", locale)}</span>
           <span className="text-xs text-slate-500 hidden sm:inline">· {t("brand.tagline", locale)}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {session && (
             <>
-              <span className="text-xs text-slate-500 hidden sm:inline">
+              <span className="text-xs text-slate-500 hidden md:inline">
                 {t("auth.signedInAs", locale)} <span className="font-medium text-slate-700">{session.name}</span>
               </span>
               <LogoutButton locale={locale} />
@@ -43,16 +43,16 @@ export default function Home({ params }: { params: { locale: string } }) {
         </div>
       </header>
 
-      <section className="max-w-4xl mx-auto px-6 pt-12 pb-16 text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-slate-900">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-12 sm:pb-16 text-center">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900">
           {t("landing.headline", locale)}
         </h1>
-        <p className="mt-5 text-lg text-slate-600 max-w-2xl mx-auto">{t("landing.sub", locale)}</p>
-        <div className="mt-8 flex items-center justify-center gap-3">
+        <p className="mt-4 sm:mt-5 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto">{t("landing.sub", locale)}</p>
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3">
           {session ? (
             <Link
               href={`/${locale}/dashboard`}
-              className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
+              className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
             >
               {t("landing.enter", locale)} <ArrowRight className="w-4 h-4" />
             </Link>
@@ -60,13 +60,13 @@ export default function Home({ params }: { params: { locale: string } }) {
             <>
               <Link
                 href={`/${locale}/signup`}
-                className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
+                className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-md font-medium shadow-sm"
               >
                 <UserPlus className="w-4 h-4" /> {t("auth.signupCta", locale)}
               </Link>
               <Link
                 href={`/${locale}/login`}
-                className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-6 py-3 rounded-md font-medium shadow-sm"
+                className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-6 py-3 rounded-md font-medium shadow-sm"
               >
                 <LogIn className="w-4 h-4" /> {t("auth.loginCta", locale)}
               </Link>
@@ -78,7 +78,7 @@ export default function Home({ params }: { params: { locale: string } }) {
         )}
       </section>
 
-      <section className="max-w-5xl mx-auto px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-16">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pb-12 sm:pb-16">
         {features.map((f) => (
           <div key={f.title} className="rounded-lg border border-slate-200 bg-white p-5">
             <f.icon className="w-6 h-6 text-brand-600" />
@@ -88,7 +88,7 @@ export default function Home({ params }: { params: { locale: string } }) {
         ))}
       </section>
 
-      <footer className="px-6 py-8 text-center text-xs text-slate-500">
+      <footer className="px-4 sm:px-6 py-8 text-center text-xs text-slate-500">
         DokanAI · The Infinity AI BuildFest 2026 · Track 4 · E-commerce
       </footer>
     </main>

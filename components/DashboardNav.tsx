@@ -51,7 +51,7 @@ function isActive(pathname: string, locale: Locale, href: string): boolean {
 export function DashboardNav({ locale }: { locale: Locale }) {
   const pathname = usePathname() ?? "";
   return (
-    <nav className="px-2 pb-4 grid grid-cols-3 gap-1 lg:flex lg:flex-col">
+    <nav className="px-2 pb-4 flex flex-col gap-1">
       {LINKS.map((l) => {
         const active = isActive(pathname, locale, l.href);
         return (
@@ -66,8 +66,8 @@ export function DashboardNav({ locale }: { locale: Locale }) {
                 : "text-slate-700 hover:bg-slate-100")
             }
           >
-            <l.icon className={"w-4 h-4 " + (active ? "text-brand-700" : "text-slate-500")} />
-            <span className="hidden lg:inline">{t(l.key, locale)}</span>
+            <l.icon className={"w-4 h-4 shrink-0 " + (active ? "text-brand-700" : "text-slate-500")} />
+            <span>{t(l.key, locale)}</span>
           </Link>
         );
       })}

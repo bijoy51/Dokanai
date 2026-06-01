@@ -1,0 +1,54 @@
+date,product,qty,unit_price,customer,email,consent,payment,status,city
+2026-05-31,Cotton Saree,1,2500,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-31,Hijab,2,800,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-31,Chickpea (Chola) 1kg,2,140,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-05-31,Mustard Oil 1L,1,280,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-05-30,Face Serum,1,1200,Anika Ferdous,,no,bkash,delivered,Dhaka
+2026-05-29,Wireless Earbuds,1,2200,Salim Khan,salim@example.com,yes,cod,pending,Khulna
+2026-05-29,Cotton Saree,1,2500,Sajib Ali,sajib@example.com,yes,cod,pending,Sylhet
+2026-05-29,Kurti,1,1400,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-28,Bedsheet Set,2,1800,Ripon Mia,ripon@example.com,yes,cod,pending,Barishal
+2026-05-28,Bluetooth Speaker,1,1800,Farhan Ahmed,farhan@example.com,yes,nagad,delivered,Dhaka
+2026-05-27,Lipstick Set,2,900,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-27,Face Serum,1,1200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-25,Power Bank 10000mAh,1,1500,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-24,LED Bulb Pack,3,350,,,,cod,delivered,Dhaka
+2026-05-22,Shampoo,2,350,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-22,Lipstick Set,1,900,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-20,Wall Clock,1,1200,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-05-20,Wireless Earbuds,1,2200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-18,Mens Punjabi,1,1800,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-17,Spice Mix Pack,2,280,,,,cod,delivered,Dhaka
+2026-05-17,Tea Pack 500g,1,380,,,,cod,delivered,Dhaka
+2026-05-15,Phone Charger,2,450,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-14,Kurti,1,1400,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-14,Hijab,2,800,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-12,Face Serum,1,1200,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-10,Power Bank 10000mAh,1,1500,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-10,Phone Charger,2,450,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-08,Cotton Saree,1,2500,,,,cod,delivered,Chattogram
+2026-05-06,Hijab,2,800,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-05,Bluetooth Speaker,1,1800,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-03,Cotton Saree,1,2500,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-01,Bedsheet Set,1,1800,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-04-28,Wireless Earbuds,1,2200,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-04-28,Phone Charger,1,450,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-04-25,Graphic T-Shirt,2,600,,,,cod,delivered,Dhaka
+2026-04-22,Kurti,1,1400,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-20,Shampoo,1,350,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-04-18,Lipstick Set,1,900,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-15,Chickpea (Chola) 1kg,3,140,,,,cod,delivered,Dhaka
+2026-04-12,Power Bank 10000mAh,1,1500,Sabbir Hossain,sabbir@example.com,no,cod,rto,Khulna
+2026-04-10,Face Serum,1,1200,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-05,Cotton Saree,1,2500,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-04-01,LED Bulb Pack,2,350,,,,cod,delivered,Dhaka
+2026-03-28,Shampoo,2,350,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-03-22,Hijab,1,800,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-15,Mens Punjabi,1,1800,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-10,Lipstick Set,2,900,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-03-05,Graphic T-Shirt,1,600,,,,cod,delivered,Dhaka
+2026-03-02,Wall Clock,1,1200,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-01-15,Wireless Earbuds,1,2200,Sabbir Hossain,sabbir@example.com,no,cod,delivered,Khulna
+2025-12-20,Face Serum,1,1200,Mukti Akter,mukti@example.com,yes,bkash,delivered,Dhaka
+2025-12-10,Shampoo,1,350,Mukti Akter,mukti@example.com,yes,bkash,delivered,Dhaka
+2025-12-01,Graphic T-Shirt,1,600,,,,cod,cancelled,Dhaka

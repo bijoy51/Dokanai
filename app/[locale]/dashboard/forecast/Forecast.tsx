@@ -22,7 +22,7 @@ export default function ForecastPage({ params }: { params: { locale: string } })
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("forecast.title", locale)}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("forecast.title", locale)}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("forecast.subtitle", locale)}</p>
       </header>
 
@@ -63,32 +63,34 @@ export default function ForecastPage({ params }: { params: { locale: string } })
           <div className="px-4 py-3 border-b border-slate-200 text-sm font-medium">
             {t("forecast.movers", locale)}
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2">Product</th>
-                <th className="text-right px-4 py-2">{t("forecast.units", locale)} (7d)</th>
-                <th className="text-right px-4 py-2">Boost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movers.map((f) => (
-                <tr key={f.productId} className="border-t border-slate-100">
-                  <td className="px-4 py-2">{locale === "bn" ? f.nameBn : f.name}</td>
-                  <td className="px-4 py-2 text-right font-medium">{formatNumber(f.forecastNext7)}</td>
-                  <td className="px-4 py-2 text-right">
-                    {f.festivalBoost > 1.05 ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
-                        ×{f.festivalBoost}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400">·</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                  <th className="text-left px-4 py-2">Product</th>
+                  <th className="text-right px-4 py-2">{t("forecast.units", locale)} (7d)</th>
+                  <th className="text-right px-4 py-2">Boost</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {movers.map((f) => (
+                  <tr key={f.productId} className="border-t border-slate-100">
+                    <td className="px-4 py-2">{locale === "bn" ? f.nameBn : f.name}</td>
+                    <td className="px-4 py-2 text-right font-medium">{formatNumber(f.forecastNext7)}</td>
+                    <td className="px-4 py-2 text-right">
+                      {f.festivalBoost > 1.05 ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+                          ×{f.festivalBoost}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">·</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section className="rounded-lg border border-slate-200 bg-white">
@@ -96,29 +98,31 @@ export default function ForecastPage({ params }: { params: { locale: string } })
             <AlertTriangle className="w-4 h-4 text-rose-600" />
             {t("forecast.deadStock", locale)}
           </div>
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2">Product</th>
-                <th className="text-right px-4 py-2">Stock</th>
-                <th className="text-right px-4 py-2">{t("forecast.daysOfStock", locale)}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dead.length === 0 && (
-                <tr><td colSpan={3} className="text-center px-4 py-4 text-slate-500 text-sm">No dead-stock risks 🎉</td></tr>
-              )}
-              {dead.map((f) => (
-                <tr key={f.productId} className="border-t border-slate-100">
-                  <td className="px-4 py-2">{locale === "bn" ? f.nameBn : f.name}</td>
-                  <td className="px-4 py-2 text-right">{f.stock}</td>
-                  <td className="px-4 py-2 text-right text-rose-600 font-medium">
-                    {f.daysOfStock > 365 ? "365+" : f.daysOfStock.toFixed(0)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
+                <tr>
+                  <th className="text-left px-4 py-2">Product</th>
+                  <th className="text-right px-4 py-2">Stock</th>
+                  <th className="text-right px-4 py-2">{t("forecast.daysOfStock", locale)}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {dead.length === 0 && (
+                  <tr><td colSpan={3} className="text-center px-4 py-4 text-slate-500 text-sm">No dead-stock risks 🎉</td></tr>
+                )}
+                {dead.map((f) => (
+                  <tr key={f.productId} className="border-t border-slate-100">
+                    <td className="px-4 py-2">{locale === "bn" ? f.nameBn : f.name}</td>
+                    <td className="px-4 py-2 text-right">{f.stock}</td>
+                    <td className="px-4 py-2 text-right text-rose-600 font-medium">
+                      {f.daysOfStock > 365 ? "365+" : f.daysOfStock.toFixed(0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
     </div>

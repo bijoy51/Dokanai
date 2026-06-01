@@ -18,11 +18,11 @@ export default function OverviewPage({ params }: { params: { locale: string } })
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("overview.title", locale)}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("overview.title", locale)}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("overview.subtitle", locale)}</p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <KpiCard
           label={t("overview.kpi.revenue", locale)}
           value={formatBDT(m.revenue30)}

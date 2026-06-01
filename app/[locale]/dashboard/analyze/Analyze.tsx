@@ -216,11 +216,11 @@ export default function Analyze({ params }: { params: { locale: string } }) {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{t("analyze.title", locale)}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("analyze.title", locale)}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("analyze.subtitle", locale)}</p>
       </header>
 
-      <section className="grid lg:grid-cols-2 gap-6 mb-8">
+      <section className="grid md:grid-cols-2 gap-4 md:gap-6 mb-8">
         <UploadPanel
           locale={locale}
           shopName={shopName}
@@ -294,7 +294,7 @@ function UploadPanel(props: {
       </div>
       <p className="text-xs text-slate-500 mb-4">{t("analyze.uploadHint", locale)}</p>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div>
           <label className="text-xs text-slate-500">{t("analyze.shopName", locale)}</label>
           <input
@@ -494,7 +494,7 @@ function Results({ locale, result }: { locale: Locale; result: AnalyzeShopRespon
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
         <Section title={t("analyze.sellingWell", locale)} icon={TrendingUp}>
           {result.selling_well.length ? (
             <SellingTable rows={result.selling_well} locale={locale} />
@@ -511,7 +511,7 @@ function Results({ locale, result }: { locale: Locale; result: AnalyzeShopRespon
         </Section>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
         <Section title={t("analyze.restockSoon", locale)} icon={PackageSearch}>
           {result.restock_soon.length ? (
             <RestockTable rows={result.restock_soon} locale={locale} />
@@ -644,7 +644,8 @@ function Chip({ label }: { label: string }) {
 
 function SellingTable({ rows, locale }: { rows: AnalyzeShopResponse["selling_well"]; locale: Locale }) {
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
       <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
         <tr>
           <th className="text-left px-3 py-2">{t("analyze.product", locale)}</th>
@@ -664,12 +665,14 @@ function SellingTable({ rows, locale }: { rows: AnalyzeShopResponse["selling_wel
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
 function PoorTable({ rows, locale }: { rows: AnalyzeShopResponse["selling_poorly"]; locale: Locale }) {
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
       <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
         <tr>
           <th className="text-left px-3 py-2">{t("analyze.product", locale)}</th>
@@ -689,12 +692,14 @@ function PoorTable({ rows, locale }: { rows: AnalyzeShopResponse["selling_poorly
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
 function RestockTable({ rows, locale }: { rows: AnalyzeShopResponse["restock_soon"]; locale: Locale }) {
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
       <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
         <tr>
           <th className="text-left px-3 py-2">{t("analyze.product", locale)}</th>
@@ -712,6 +717,7 @@ function RestockTable({ rows, locale }: { rows: AnalyzeShopResponse["restock_soo
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
