@@ -15,6 +15,11 @@ import { t, type Locale } from "@/lib/i18n/messages";
  * to the Photos tab instead.
  */
 
+// Vercel serverless body limit is 4.5 MB — we leave headroom for the
+// multipart envelope. Compressing a PDF client-side would mean
+// rasterising every page (heavy). For now the limit stays here; the
+// error message tells the user how to split a bigger PDF or rasterise
+// pages to the Photos tab.
 const MAX_BYTES = 4_000_000;
 const DATASET_KEY = "dokanai:imported-dataset:v1";
 

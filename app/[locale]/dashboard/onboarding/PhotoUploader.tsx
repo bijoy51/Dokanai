@@ -23,10 +23,70 @@ import { t, type Locale } from "@/lib/i18n/messages";
  * Hard cap: 8 photos, 4 MB combined (Vercel body limit headroom).
  */
 
+// What the user is allowed to PICK from disk (raw, pre-compression).
+// We auto-compress everything below to fit Vercel's body limit.
 const MAX_PHOTOS = 8;
-const MAX_BYTES = 4_000_000;
+const MAX_RAW_BYTES = 50_000_000;     // 50 MB raw — phone photos are 3-12 MB each.
+// What we POST to the server after client-side compression. Must stay
+// under Vercel's serverless body limit (4.5 MB) with multipart envelope
+// headroom.
+const MAX_UPLOAD_BYTES = 4_000_000;
+// Compression target: max long-edge 1600 px is plenty for OCR; 0.85
+// JPEG quality keeps receipts/ledgers legible while cutting size 10-30×.
+const COMPRESS_MAX_EDGE = 1600;
+const COMPRESS_QUALITY = 0.85;
+
 const ALLOWED = /^image\/(jpeg|png|webp|gif)$/i;
 const DATASET_KEY = "dokanai:imported-dataset:v1";
+
+/**
+ * Downscale + re-encode an image to JPEG so the multipart upload stays
+ * under Vercel's 4.5 MB body cap even when the user picks 8 phone-sized
+ * photos. Skips images that are already small enough.
+ *
+ * Returns the original File untouched if anything goes wrong — better
+ * to let the server reject a too-big upload with a clear 413 than to
+ * silently lose the user's data.
+ */
+async function compressImage(file: File): Promise<File> {
+  // Already small enough → keep as-is (skip lossy re-encoding).
+  if (file.size <= 400_000 && file.type === "image/jpeg") return file;
+  // GIFs may be animated; canvas would flatten them — leave alone.
+  if (file.type === "image/gif") return file;
+  try {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onerror = () => reject(new Error("read failed"));
+      r.onload = () => resolve(r.result as string);
+      r.readAsDataURL(file);
+    });
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onerror = () => reject(new Error("decode failed"));
+      i.onload = () => resolve(i);
+      i.src = dataUrl;
+    });
+    const ratio = Math.min(1, COMPRESS_MAX_EDGE / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * ratio));
+    const h = Math.max(1, Math.round(img.height * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob: Blob = await new Promise((resolve, reject) =>
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("encode failed"))), "image/jpeg", COMPRESS_QUALITY),
+    );
+    // If compression somehow made it bigger (rare; tiny PNGs sometimes),
+    // keep original.
+    if (blob.size >= file.size) return file;
+    const newName = file.name.replace(/\.[^.]+$/, "") + ".jpg";
+    return new File([blob], newName, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
 
 interface ExtractResult {
   products: Array<Record<string, unknown>>;
@@ -68,8 +128,8 @@ export function PhotoUploader({ locale }: { locale: Locale }) {
         return combined.slice(0, MAX_PHOTOS);
       }
       const total = combined.reduce((s, f) => s + f.file.size, 0);
-      if (total > MAX_BYTES) {
-        setError(t("ob.photos.errSize", locale).replace("{mb}", (MAX_BYTES / 1_000_000).toFixed(1)));
+      if (total > MAX_RAW_BYTES) {
+        setError(t("ob.photos.errSize", locale).replace("{mb}", (MAX_RAW_BYTES / 1_000_000).toFixed(0)));
       }
       return combined;
     });
@@ -89,16 +149,29 @@ export function PhotoUploader({ locale }: { locale: Locale }) {
       setError(t("ob.photos.errEmpty", locale));
       return;
     }
-    const total = files.reduce((s, f) => s + f.file.size, 0);
-    if (total > MAX_BYTES) {
-      setError(t("ob.photos.errSize", locale).replace("{mb}", (MAX_BYTES / 1_000_000).toFixed(1)));
+    const rawTotal = files.reduce((s, f) => s + f.file.size, 0);
+    if (rawTotal > MAX_RAW_BYTES) {
+      setError(t("ob.photos.errSize", locale).replace("{mb}", (MAX_RAW_BYTES / 1_000_000).toFixed(0)));
       return;
     }
     setAnalyzing(true);
     try {
+      // Compress client-side BEFORE upload so the multipart payload
+      // stays under Vercel's serverless body limit. A phone photo
+      // typically drops from 5-8 MB to 200-500 KB at 1600px / Q=0.85.
+      const compressed = await Promise.all(files.map((f) => compressImage(f.file)));
+      const compressedTotal = compressed.reduce((s, b) => s + b.size, 0);
+      if (compressedTotal > MAX_UPLOAD_BYTES) {
+        setError(
+          t("ob.photos.errCompressedTooBig", locale)
+            .replace("{mb}", (compressedTotal / 1_000_000).toFixed(1))
+            .replace("{max}", (MAX_UPLOAD_BYTES / 1_000_000).toFixed(1)),
+        );
+        return;
+      }
       const fd = new FormData();
       fd.append("mode", "photos");
-      for (const f of files) fd.append("files", f.file, f.file.name);
+      for (const f of compressed) fd.append("files", f, f.name);
       const res = await fetch("/api/import/extract", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {

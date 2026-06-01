@@ -253,7 +253,7 @@ const en: Dict = {
 
   // Photos uploader
   "ob.photos.dropTitle": "Drop photos here, or click to choose",
-  "ob.photos.dropHint": "JPEG / PNG / WebP / GIF. Up to {max} photos, ~4 MB total.",
+  "ob.photos.dropHint": "JPEG / PNG / WebP / GIF. Up to {max} photos, ~50 MB total — we'll auto-compress before upload.",
   "ob.photos.analyze": "Analyze with AI",
   "ob.photos.analyzing": "Reading photos…",
   "ob.photos.import": "Import to my shop",
@@ -268,7 +268,8 @@ const en: Dict = {
   "ob.photos.imported": "Shop data imported from photos.",
   "ob.photos.errType": "Only JPEG, PNG, WebP, or GIF images are supported.",
   "ob.photos.errCount": "Up to {max} photos per upload.",
-  "ob.photos.errSize": "Combined size is over {mb} MB. Compress or downscale and retry.",
+  "ob.photos.errSize": "Combined size is over {mb} MB. Pick fewer or smaller photos.",
+  "ob.photos.errCompressedTooBig": "Even after compression the upload is {mb} MB (limit is {max} MB). Try fewer photos.",
   "ob.photos.errEmpty": "Add at least one photo.",
   "ob.photos.errEmptyExtraction": "Couldn't read any products or sales from these photos. Try clearer images.",
   "ob.photos.errAnalyze": "AI extraction failed. Please try again.",
@@ -620,7 +621,7 @@ const bn: Dict = {
 
   // Photos uploader
   "ob.photos.dropTitle": "ছবি এখানে drop করুন, অথবা ক্লিক করে বাছুন",
-  "ob.photos.dropHint": "JPEG / PNG / WebP / GIF। সর্বোচ্চ {max} ছবি, ~৪ MB মোট।",
+  "ob.photos.dropHint": "JPEG / PNG / WebP / GIF। সর্বোচ্চ {max} ছবি, ~৫০ MB মোট — আমরা আপলোডের আগে ছোট করে নেব।",
   "ob.photos.analyze": "AI দিয়ে পড়ুন",
   "ob.photos.analyzing": "ছবি পড়া হচ্ছে…",
   "ob.photos.import": "আমার দোকানে ইম্পোর্ট করুন",
@@ -635,7 +636,8 @@ const bn: Dict = {
   "ob.photos.imported": "ছবি থেকে শপ ডেটা ইম্পোর্ট হয়েছে।",
   "ob.photos.errType": "শুধু JPEG, PNG, WebP, বা GIF ছবি সাপোর্ট করে।",
   "ob.photos.errCount": "একসাথে সর্বোচ্চ {max} ছবি।",
-  "ob.photos.errSize": "মোট সাইজ {mb} MB এর বেশি। ছোট করে আবার চেষ্টা করুন।",
+  "ob.photos.errSize": "মোট সাইজ {mb} MB এর বেশি। কম বা ছোট ছবি দিন।",
+  "ob.photos.errCompressedTooBig": "Compress করার পরেও আপলোড {mb} MB হয়েছে (সীমা {max} MB)। কম ছবি দিন।",
   "ob.photos.errEmpty": "অন্তত একটি ছবি যোগ করুন।",
   "ob.photos.errEmptyExtraction": "এই ছবিগুলো থেকে কোনো প্রোডাক্ট/সেলস পাওয়া যায়নি। আরও স্পষ্ট ছবি দিন।",
   "ob.photos.errAnalyze": "AI পড়তে পারেনি। আবার চেষ্টা করুন।",

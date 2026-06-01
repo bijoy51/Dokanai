@@ -235,17 +235,15 @@ export async function extractFromImages(images: ImageFile[]): Promise<Extracted>
 }
 
 export async function extractFromPdf(pdfBytes: Uint8Array): Promise<Extracted> {
-  // Lazy-import so the heavy pdf-parse module only loads when this
-  // entry point is actually hit (the photos path doesn't need it).
-  const { PDFParse } = await import("pdf-parse");
-  const parser = new PDFParse({ data: pdfBytes });
-  let text = "";
-  try {
-    const result = await parser.getText();
-    text = (result.text || "").trim();
-  } finally {
-    await parser.destroy().catch(() => {});
-  }
+  // unpdf is the serverless-safe replacement for pdf-parse — it wraps
+  // pdfjs-dist without spawning a worker, which is what was crashing
+  // pdf-parse v2 on Vercel's Node runtime. Lazy-imported so the
+  // photos path doesn't pay the load cost.
+  const { extractText } = await import("unpdf");
+  const result = await extractText(new Uint8Array(pdfBytes), { mergePages: true });
+  // extractText returns { text: string | string[], totalPages: number }
+  // when mergePages=true it's a single string; otherwise a per-page array.
+  const text = (Array.isArray(result.text) ? result.text.join("\n") : result.text || "").trim();
   if (text.length < 20) {
     throw new Error(
       "Couldn't read any text from the PDF — it may be a scanned image. Try uploading the pages as Photos instead.",
