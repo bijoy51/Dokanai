@@ -98,33 +98,90 @@ function defaultSchedule(): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function EmailComposer({ locale }: { locale: Locale }) {
+// Persistence: each audience+locale combination keeps its own subject + body
+// in localStorage so editing the VIP template, then switching to RTO Risk,
+// then back to VIP, restores your VIP edits exactly. Three audiences =
+// three independent template "drafts" the user can mutate freely.
+
+const STORAGE_PREFIX = "dokanai:email-template";
+
+function templateKey(a: AudienceKey, locale: Locale): string {
+  return `${STORAGE_PREFIX}:${a}:${locale}`;
+}
+
+function loadSaved(a: AudienceKey, locale: Locale): Template | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(templateKey(a, locale));
+    if (!raw) return null;
+    const obj = JSON.parse(raw) as Partial<Template>;
+    if (obj && typeof obj.subject === "string" && typeof obj.body === "string") {
+      return { subject: obj.subject, body: obj.body };
+    }
+  } catch {
+    /* corrupt entry — fall through to default */
+  }
+  return null;
+}
+
+function saveDraft(a: AudienceKey, locale: Locale, draft: Template): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(templateKey(a, locale), JSON.stringify(draft));
+  } catch {
+    /* quota or disabled — non-fatal, just won't survive a reload */
+  }
+}
+
+export interface ScheduledNotice {
+  id: string;
+  audience: AudienceKey;
+  scheduledFor: string;
+  reach: { audienceCount: number; withEmail: number; optedIn: number };
+  sendConfigured: boolean;
+}
+
+export function EmailComposer({
+  locale,
+  onScheduled,
+}: {
+  locale: Locale;
+  /** Called after a successful schedule so the parent (the tabbed wrapper)
+   *  can nudge the user toward the Scheduled tab. */
+  onScheduled?: (n: ScheduledNotice) => void;
+}) {
   const [audience, setAudience] = useState<AudienceKey | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [scheduledFor, setScheduledFor] = useState(defaultSchedule());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<{ id: string; scheduledFor: string; reach: { audienceCount: number; withEmail: number; optedIn: number }; sendConfigured: boolean } | null>(null);
+  const [lastScheduled, setLastScheduled] = useState<ScheduledNotice | null>(null);
 
   const templates = locale === "bn" ? TEMPLATES_BN : TEMPLATES_EN;
 
-  // Track the auto-filled template so user edits aren't clobbered when they
-  // tweak fields then change audience.
-  const lastTemplate = useRef<Template | null>(null);
-
-  // When audience changes, fill the form with a fresh template — but only
-  // overwrite a field if the user hasn't edited it away from the previous
-  // template (or hasn't typed anything yet).
+  // When audience (or locale) changes, hydrate the form from the saved draft
+  // for that combo, falling back to the canned placeholder if there is none.
   useEffect(() => {
     if (!audience) return;
+    const saved = loadSaved(audience, locale);
     const tpl = templates[audience];
-    setSubject((cur) => (cur === "" || cur === lastTemplate.current?.subject ? tpl.subject : cur));
-    setBody((cur) => (cur === "" || cur === lastTemplate.current?.body ? tpl.body : cur));
-    lastTemplate.current = tpl;
-    // intentionally re-fire on locale change so a language switch refreshes
-    // an untouched placeholder
-  }, [audience, templates]);
+    setSubject(saved?.subject ?? tpl.subject);
+    setBody(saved?.body ?? tpl.body);
+  }, [audience, locale, templates]);
+
+  // Direct write to localStorage on every keystroke (small payload, sync).
+  // Calling these from the input onChange handlers keeps the persistence
+  // logic out of effects (which would otherwise overwrite the *other*
+  // audience's draft on the render right after a switch).
+  const editSubject = (v: string) => {
+    setSubject(v);
+    if (audience) saveDraft(audience, locale, { subject: v, body });
+  };
+  const editBody = (v: string) => {
+    setBody(v);
+    if (audience) saveDraft(audience, locale, { subject, body: v });
+  };
 
   const audienceMeta: Array<{
     key: AudienceKey;
@@ -161,7 +218,7 @@ export function EmailComposer({ locale }: { locale: Locale }) {
 
   const submit = async () => {
     setError("");
-    setSuccess(null);
+    setLastScheduled(null);
     if (!audience) {
       setError(t("mkt.email.errAudience", locale));
       return;
@@ -190,21 +247,28 @@ export function EmailComposer({ locale }: { locale: Locale }) {
         setError(data.error || t("mkt.email.errGeneric", locale));
         return;
       }
-      setSuccess(data);
+      const notice: ScheduledNotice = {
+        id: data.id,
+        audience,
+        scheduledFor: data.scheduledFor ?? scheduledFor,
+        reach: data.reach ?? { audienceCount: 0, withEmail: 0, optedIn: 0 },
+        sendConfigured: !!data.sendConfigured,
+      };
+      setLastScheduled(notice);
+      onScheduled?.(notice);
+      // Per spec: the user can schedule all three audiences in one
+      // session. Keep their drafts intact; just clear the current
+      // selection so the form invites the next pick. The drafts
+      // themselves remain in localStorage.
+      setAudience(null);
+      setSubject("");
+      setBody("");
+      setScheduledFor(defaultSchedule());
     } catch (e) {
       setError(e instanceof Error ? e.message : t("mkt.email.errGeneric", locale));
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const resetForNew = () => {
-    setSuccess(null);
-    setSubject("");
-    setBody("");
-    setAudience(null);
-    lastTemplate.current = null;
-    setScheduledFor(defaultSchedule());
   };
 
   return (
@@ -217,41 +281,48 @@ export function EmailComposer({ locale }: { locale: Locale }) {
         <p className="text-xs text-slate-500 mt-1">{t("mkt.email.subtitle", locale)}</p>
       </div>
 
-      {success ? (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+      {lastScheduled && (
+        // Banner above the form — confirms the schedule but keeps the form
+        // open so the user can immediately schedule the next audience.
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <div className="flex items-start gap-2 text-emerald-800">
-            <CheckCircle2 className="w-5 h-5 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <div className="font-medium">{t("mkt.email.scheduled", locale)}</div>
-              <div className="text-sm text-emerald-700 mt-1">
-                {t("mkt.email.scheduledFor", locale)}{" "}
-                <span className="font-mono">{new Date(success.scheduledFor).toLocaleString()}</span>
-              </div>
-              <div className="text-sm text-emerald-700 mt-1">
-                {t("mkt.email.reachLine", locale)}{" "}
-                <strong>{success.reach.optedIn}</strong> / {success.reach.audienceCount}{" "}
-                <span className="text-emerald-600">
-                  ({success.reach.withEmail} {t("mkt.email.withEmail", locale)})
+            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
+            <div className="flex-1 text-sm">
+              <div className="font-medium">
+                {t("mkt.email.scheduled", locale)}{" "}
+                <span className="text-xs text-emerald-700">
+                  ({t(`mkt.email.aud${lastScheduled.audience === "vip" ? "Vip" : lastScheduled.audience === "rto" ? "Rto" : "Atrisk"}`, locale)})
                 </span>
               </div>
-              {!success.sendConfigured && (
-                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-2">
+              <div className="text-emerald-700 mt-0.5">
+                {t("mkt.email.scheduledFor", locale)}{" "}
+                <span className="font-mono">{new Date(lastScheduled.scheduledFor).toLocaleString()}</span>
+                {"  ·  "}
+                <strong>{lastScheduled.reach.optedIn}</strong> / {lastScheduled.reach.audienceCount}{" "}
+                <span className="text-emerald-600">
+                  ({lastScheduled.reach.withEmail} {t("mkt.email.withEmail", locale)})
+                </span>
+              </div>
+              {!lastScheduled.sendConfigured && (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 mt-2">
                   {t("mkt.email.providerMissing", locale)}
                 </div>
               )}
+              <div className="text-xs text-emerald-700 mt-1">{t("mkt.email.seeScheduledTab", locale)}</div>
             </div>
-          </div>
-          <div className="mt-4">
             <button
               type="button"
-              onClick={resetForNew}
-              className="inline-flex items-center gap-1.5 text-sm bg-brand-600 hover:bg-brand-700 text-white font-medium rounded-md px-4 py-2"
+              onClick={() => setLastScheduled(null)}
+              className="text-emerald-700 hover:text-emerald-900 text-lg leading-none px-1"
+              aria-label="Dismiss"
             >
-              {t("mkt.email.composeAnother", locale)}
+              ×
             </button>
           </div>
         </div>
-      ) : (
+      )}
+
+      {(
         <>
           {/* Audience picker */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
@@ -287,7 +358,7 @@ export function EmailComposer({ locale }: { locale: Locale }) {
             <input
               type="text"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
+              onChange={(e) => editSubject(e.target.value)}
               disabled={!audience}
               placeholder={
                 audience
@@ -303,7 +374,7 @@ export function EmailComposer({ locale }: { locale: Locale }) {
             <label className="text-xs text-slate-500 block mb-1">{t("mkt.email.bodyLabel", locale)}</label>
             <textarea
               value={body}
-              onChange={(e) => setBody(e.target.value)}
+              onChange={(e) => editBody(e.target.value)}
               disabled={!audience}
               rows={10}
               placeholder={

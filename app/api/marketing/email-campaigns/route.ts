@@ -1,1 +1,1 @@
-export { POST } from "./EmailCampaignsApi";
+export { POST, GET } from "./EmailCampaignsApi";

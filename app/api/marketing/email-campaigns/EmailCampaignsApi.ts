@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { hydrateImported } from "@/lib/data/imported";
-import { addCampaign } from "@/lib/agent/store";
+import { addCampaign, listCampaigns } from "@/lib/agent/store";
 import { resolveAudience } from "@/lib/email/audience";
 import { emailConfigured } from "@/lib/email/resend";
 
@@ -72,6 +72,24 @@ export async function POST(req: Request) {
     reach: preview.stats,
     sendConfigured: emailConfigured(),
   });
+}
+
+/**
+ * GET /api/marketing/email-campaigns
+ *   -> { campaigns: [...] }  (channel='email' only, newest first)
+ *
+ * Powers the "Scheduled" tab on the Auto-Marketing page. Different from
+ * /api/agent/campaigns (which returns ALL channels) — this is filtered
+ * to email so the UI doesn't have to.
+ */
+export async function GET() {
+  const session = getSession();
+  if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  const all = await listCampaigns(session.email);
+  const emails = all
+    .filter((c) => c.channel === "email")
+    .sort((a, b) => (a.scheduledFor > b.scheduledFor ? -1 : 1));
+  return NextResponse.json({ campaigns: emails });
 }
 
 function normaliseScheduledFor(input: string): string {
