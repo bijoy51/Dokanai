@@ -1,7 +1,7 @@
 import { bundleRecommendations, priceRecommendations } from "@/lib/ai/pricing";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatPercent } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus, Package } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Package, Activity } from "lucide-react";
 import { isShopEmpty } from "@/lib/data/store";
 import { NoDataState } from "@/components/NoDataState";
 
@@ -17,12 +17,56 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
     hold: "bg-slate-50 text-slate-600 border-slate-200",
   };
 
+  const elasticityStyles: Record<string, string> = {
+    inelastic: "bg-sky-50 text-sky-700 border-sky-200",
+    elastic: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+    unit: "bg-slate-50 text-slate-600 border-slate-200",
+    insufficient: "bg-slate-50 text-slate-400 border-slate-200",
+  };
+
+  // Average elasticity across fitted (non-default) products — gives the
+  // shopkeeper a one-glance read on how price-sensitive their catalogue is.
+  const fitted = prices.filter((r) => !r.elasticity.fromDefault);
+  const avgElasticity =
+    fitted.length > 0
+      ? fitted.reduce((s, r) => s + r.elasticity.elasticity, 0) / fitted.length
+      : null;
+
   return (
     <div>
       <header className="mb-6">
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{t("pricing.title", locale)}</h1>
         <p className="text-sm text-slate-500 mt-1">{t("pricing.subtitle", locale)}</p>
       </header>
+
+      {/* Elasticity summary banner — explains, in 1 sentence, what the model
+          learned from this shop's sales history. */}
+      <section className="mb-6 rounded-lg border border-slate-200 bg-gradient-to-br from-sky-50 to-white p-4">
+        <div className="flex items-start gap-3">
+          <Activity className="w-5 h-5 text-sky-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-slate-900">
+              {t("pricing.elasticity.title", locale)}
+            </div>
+            <div className="text-xs text-slate-600 mt-1">
+              {avgElasticity === null ? (
+                t("pricing.elasticity.noData", locale)
+              ) : (
+                <>
+                  {t("pricing.elasticity.fittedPrefix", locale)}{" "}
+                  <span className="font-mono font-medium text-slate-900">
+                    b = {avgElasticity.toFixed(2)}
+                  </span>
+                  {" "}
+                  {avgElasticity > -1
+                    ? t("pricing.elasticity.inelasticHint", locale)
+                    : t("pricing.elasticity.elasticHint", locale)}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white">
         <div className="px-4 py-3 border-b border-slate-200 text-sm font-medium">
@@ -36,6 +80,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
                 <th className="text-right px-4 py-2">{t("pricing.col.current", locale)}</th>
                 <th className="text-right px-4 py-2">{t("pricing.col.suggested", locale)}</th>
                 <th className="text-left px-4 py-2">{t("pricing.col.action", locale)}</th>
+                <th className="text-left px-4 py-2 hidden sm:table-cell">{t("pricing.col.elasticity", locale)}</th>
                 <th className="text-right px-4 py-2">{t("pricing.col.lift", locale)}</th>
                 <th className="text-left px-4 py-2 hidden md:table-cell">Why</th>
               </tr>
@@ -43,6 +88,7 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
             <tbody>
               {prices.map((r) => {
                 const Icon = r.action === "raise" ? TrendingUp : r.action === "lower" ? TrendingDown : Minus;
+                const e = r.elasticity;
                 return (
                   <tr key={r.productId} className="border-t border-slate-100">
                     <td className="px-4 py-2">{locale === "bn" ? r.nameBn : r.name}</td>
@@ -52,6 +98,21 @@ export default function PricingPage({ params }: { params: { locale: string } }) 
                       <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border ${actionStyles[r.action]}`}>
                         <Icon className="w-3 h-3" />
                         {t(`pricing.action.${r.action}`, locale)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 hidden sm:table-cell">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border ${elasticityStyles[e.classification]}`}
+                        title={
+                          e.fromDefault
+                            ? "Category prior — not enough price variation to fit"
+                            : `Fitted from ${e.sampleSize} weekly observations, R²=${e.rSquared}`
+                        }
+                      >
+                        <span className="font-mono">{e.elasticity.toFixed(2)}</span>
+                        <span className="text-[10px] opacity-75">
+                          {e.fromDefault ? "prior" : `R²${e.rSquared}`}
+                        </span>
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right">

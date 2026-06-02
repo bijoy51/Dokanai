@@ -1,6 +1,8 @@
 import { KpiCard } from "@/components/KpiCard";
 import { RevenueChart } from "@/components/charts/RevenueChart";
 import { StatusPill } from "@/components/StatusPill";
+import { StockoutAlert } from "@/components/StockoutAlert";
+import { MarketTrendsPanel } from "@/components/MarketTrendsPanel";
 import { computeOverview, recentOrders } from "@/lib/ai/overview";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatNumber, formatPercent } from "@/lib/utils";
@@ -44,6 +46,10 @@ export default function OverviewPage({ params }: { params: { locale: string } })
           trend={-trend(m.rtoRate, m.rtoRatePrev)}
         />
       </div>
+
+      <StockoutAlert locale={locale} />
+
+      <MarketTrendsPanel locale={locale} />
 
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
         <div className="text-sm font-medium mb-2">{t("overview.chart.title", locale)}</div>

@@ -1,5 +1,6 @@
 import { getStore } from "@/lib/data/store";
 import { forecastProduct } from "./forecast";
+import { elasticityFor, type Elasticity } from "./elasticity";
 import type { Product } from "@/lib/types";
 
 export type PricingAction = "raise" | "lower" | "hold";
@@ -14,6 +15,8 @@ export interface PriceRec {
   expectedLiftPct: number;
   reason: string;
   reasonBn: string;
+  /** Elasticity slice for the row — surfaces the demand curve in the UI. */
+  elasticity: Elasticity;
 }
 
 /** Suggest price changes from demand signals + stock health. */
@@ -22,30 +25,53 @@ export function priceRecommendations(): PriceRec[] {
   const recs: PriceRec[] = [];
   for (const p of store.products) {
     const f = forecastProduct(p);
+    const e = elasticityFor(p);
     let action: PricingAction = "hold";
     let multiplier = 1;
     let reason = "Demand is stable; no change recommended.";
     let reasonBn = "চাহিদা স্থিতিশীল; পরিবর্তনের প্রয়োজন নেই।";
     let lift = 0;
 
+    // Stock + festival signals dominate when they're loud. Elasticity then
+    // refines the magnitude of the move (a more-elastic SKU gets a softer
+    // raise; an inelastic SKU gets a deeper one).
     if (f.festivalBoost > 1.3 && f.daysOfStock < 14) {
       action = "raise";
-      multiplier = 1.05;
+      // Inelastic festival items can absorb more, elastic ones less.
+      const festBump = e.classification === "inelastic" ? 1.08 : e.classification === "elastic" ? 1.03 : 1.05;
+      multiplier = festBump;
       lift = 8 + (f.festivalBoost - 1) * 6;
-      reason = `Festival-driven demand spike. Stock will run out in ${f.daysOfStock.toFixed(0)} days.`;
-      reasonBn = `উৎসবের কারণে চাহিদা বেড়েছে। ${f.daysOfStock.toFixed(0)} দিনে স্টক শেষ হবে।`;
+      reason = `Festival demand × elasticity ${e.elasticity.toFixed(2)} → raise ${Math.round((multiplier - 1) * 100)}%. Stock runs out in ${f.daysOfStock.toFixed(0)} days.`;
+      reasonBn = `উৎসব চাহিদা × ইলাস্টিসিটি ${e.elasticity.toFixed(2)} → ${Math.round((multiplier - 1) * 100)}% বাড়ান। ${f.daysOfStock.toFixed(0)} দিনে স্টক শেষ।`;
     } else if (f.daysOfStock > 60 && p.stock > 10) {
       action = "lower";
-      multiplier = 0.9;
+      // Elastic SKUs respond strongly to discount; inelastic ones don't —
+      // so we discount elastic items more aggressively for clearance.
+      const cutDepth = e.classification === "elastic" ? 0.85 : e.classification === "inelastic" ? 0.95 : 0.9;
+      multiplier = cutDepth;
       lift = 6 + Math.min(10, f.daysOfStock / 20);
-      reason = `Slow mover, ${f.daysOfStock.toFixed(0)} days of stock. A 10% discount accelerates clearance.`;
-      reasonBn = `ধীর গতির পণ্য, ${f.daysOfStock.toFixed(0)} দিনের স্টক। ১০% ছাড় বিক্রি দ্রুত করবে।`;
+      reason = `Slow mover, ${f.daysOfStock.toFixed(0)} days of stock; ${e.classification} demand (b=${e.elasticity.toFixed(2)}) → ${Math.round((1 - multiplier) * 100)}% cut.`;
+      reasonBn = `ধীর গতির পণ্য, ${f.daysOfStock.toFixed(0)} দিনের স্টক; ${Math.round((1 - multiplier) * 100)}% ছাড়।`;
     } else if (f.festivalBoost > 1.1) {
       action = "raise";
-      multiplier = 1.03;
+      multiplier = e.classification === "inelastic" ? 1.05 : 1.03;
       lift = 4;
-      reason = "Mild festival lift detected. Small price increase opportunity.";
-      reasonBn = "সামান্য উৎসব প্রভাব। দাম একটু বাড়ানোর সুযোগ।";
+      reason = "Mild festival lift; elasticity supports a small price test.";
+      reasonBn = "সামান্য উৎসব প্রভাব; দাম একটু বাড়ানোর সুযোগ।";
+    } else if (!e.fromDefault && e.classification === "inelastic" && e.expectedRevenuePct >= 3) {
+      // No festival/stock pressure — but the demand curve itself says
+      // there's revenue on the table. Take it.
+      action = "raise";
+      multiplier = e.optimalPrice / p.price;
+      lift = e.expectedRevenuePct;
+      reason = `Inelastic demand (b=${e.elasticity.toFixed(2)}, R²=${e.rSquared}). Optimal price ≈ ${e.optimalPrice} → +${lift}% revenue.`;
+      reasonBn = `কম-সংবেদনশীল চাহিদা (b=${e.elasticity.toFixed(2)})। আদর্শ দাম ≈ ${e.optimalPrice}।`;
+    } else if (!e.fromDefault && e.classification === "elastic" && e.expectedRevenuePct >= 3) {
+      action = "lower";
+      multiplier = e.optimalPrice / p.price;
+      lift = e.expectedRevenuePct;
+      reason = `Elastic demand (b=${e.elasticity.toFixed(2)}, R²=${e.rSquared}). Cut to ${e.optimalPrice} → +${lift}% revenue.`;
+      reasonBn = `সংবেদনশীল চাহিদা (b=${e.elasticity.toFixed(2)})। দাম কমিয়ে ${e.optimalPrice}।`;
     }
 
     const suggested = Math.round(p.price * multiplier);
@@ -59,6 +85,7 @@ export function priceRecommendations(): PriceRec[] {
       expectedLiftPct: Number(lift.toFixed(1)),
       reason,
       reasonBn,
+      elasticity: e,
     });
   }
   // Sort: raise+festival first, then lower/discount, then hold
