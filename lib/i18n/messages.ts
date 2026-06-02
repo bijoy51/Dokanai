@@ -250,6 +250,41 @@ const en: Dict = {
   "ob.tab.csvHint": "Already have spreadsheets? Drop them in — fastest path.",
   "ob.tab.photosHint": "Snap your handwritten ledger, receipts, or m-banking screenshots. AI reads them.",
   "ob.tab.pdfHint": "Got a PDF export (Excel, invoice, bKash statement)? Drop it in. AI reads selectable text.",
+  "ob.tab.live": "Live Sync",
+  "ob.tab.liveHint": "Connect a Google Sheet once. Every edit pushes to DokanAI in ~30 seconds.",
+
+  // Live sync panel
+  "ob.sync.title": "Live Sync from Google Sheets",
+  "ob.sync.intro": "Connect your sheet once. From then on, every time a row changes in Google Sheets it pushes to DokanAI within ~30 seconds — no re-uploading.",
+  "ob.sync.bullet1": "Works on free Gmail accounts. No Google Workspace needed.",
+  "ob.sync.bullet2": "Your sheet needs a header row. Use columns: name, category, price, stock (for products) and date, product, qty, unit_price, customer (for sales).",
+  "ob.sync.bullet3": "Live Sync REPLACES your dashboard data with the sheet's contents on every push. Don't mix it with manually-imported CSVs.",
+  "ob.sync.connect": "Connect a sheet",
+  "ob.sync.loading": "Loading…",
+  "ob.sync.connected": "Connected",
+  "ob.sync.lastSync": "Last sync",
+  "ob.sync.waitingFirst": "Waiting for the first push from your sheet…",
+  "ob.sync.rowsEver": "rows synced total",
+  "ob.sync.lastError": "Last error",
+  "ob.sync.webhookUrl": "Your webhook URL (keep this secret)",
+  "ob.sync.urlOnceWarning": "This URL is shown only once. Copy it into your Apps Script now — if you lose it, click Rotate to generate a new one.",
+  "ob.sync.urlHidden": "The webhook URL is set up but is no longer shown for security. If you need to re-paste it, click \"Rotate token\" below.",
+  "ob.sync.snippetLabel": "Google Apps Script snippet (your URL is already pasted in)",
+  "ob.sync.copy": "Copy URL",
+  "ob.sync.copySnippet": "Copy snippet",
+  "ob.sync.copied": "Copied!",
+  "ob.sync.howTo":
+    "1. Open your Google Sheet.\n" +
+    "2. Extensions → Apps Script.\n" +
+    "3. Replace any existing code with the snippet above, then click 💾 to save.\n" +
+    "4. Close Apps Script, reload the sheet.\n" +
+    "5. Click the new \"DokanAI\" menu → \"Setup auto-sync\". Authorise when Google asks.\n" +
+    "6. Done — every edit will now sync within ~30s.",
+  "ob.sync.refresh": "Refresh status",
+  "ob.sync.rotate": "Rotate token",
+  "ob.sync.disconnect": "Disconnect",
+  "ob.sync.confirmRotate": "Rotate the token? The old URL will stop working immediately — you'll need to paste the new one into your Apps Script.",
+  "ob.sync.confirmDisconnect": "Disconnect Live Sync? The current URL will stop working immediately. Your already-synced data stays.",
 
   // Photos uploader
   "ob.photos.dropTitle": "Drop photos here, or click to choose",
@@ -618,6 +653,41 @@ const bn: Dict = {
   "ob.tab.csvHint": "স্প্রেডশিট আছে? এখানে দিন — সবচেয়ে দ্রুত পথ।",
   "ob.tab.photosHint": "হাতের লেখা খাতা, রসিদ বা মোবাইল ব্যাংকিং স্ক্রিনশটের ছবি তুলুন। AI পড়ে নেবে।",
   "ob.tab.pdfHint": "PDF এক্সপোর্ট আছে (Excel, ইনভয়েস, bKash স্টেটমেন্ট)? এখানে দিন। AI পড়ে নেবে।",
+  "ob.tab.live": "লাইভ সিঙ্ক",
+  "ob.tab.liveHint": "Google Sheet একবার কানেক্ট করুন। প্রতিটি এডিট ৩০ সেকেন্ডের মধ্যে DokanAI-তে পৌঁছাবে।",
+
+  // Live sync panel
+  "ob.sync.title": "Google Sheets থেকে লাইভ সিঙ্ক",
+  "ob.sync.intro": "একবার শীট কানেক্ট করুন। এরপর প্রতিবার শীটে রো পরিবর্তন হলে ৩০ সেকেন্ডের মধ্যে DokanAI-তে চলে আসবে — আর আপলোড করতে হবে না।",
+  "ob.sync.bullet1": "ফ্রি Gmail অ্যাকাউন্টেও কাজ করে। Google Workspace লাগে না।",
+  "ob.sync.bullet2": "শীটে হেডার রো থাকতে হবে। কলাম: name, category, price, stock (প্রোডাক্ট) এবং date, product, qty, unit_price, customer (সেলস)।",
+  "ob.sync.bullet3": "প্রতিটি পুশে লাইভ সিঙ্ক ড্যাশবোর্ড ডেটা শীটের কন্টেন্ট দিয়ে রিপ্লেস করে। ম্যানুয়ালি ইম্পোর্ট করা CSV-র সাথে মিক্স করবেন না।",
+  "ob.sync.connect": "শীট কানেক্ট করুন",
+  "ob.sync.loading": "লোড হচ্ছে…",
+  "ob.sync.connected": "কানেক্টেড",
+  "ob.sync.lastSync": "শেষ সিঙ্ক",
+  "ob.sync.waitingFirst": "শীট থেকে প্রথম পুশের অপেক্ষায়…",
+  "ob.sync.rowsEver": "মোট রো সিঙ্ক হয়েছে",
+  "ob.sync.lastError": "শেষ ত্রুটি",
+  "ob.sync.webhookUrl": "আপনার webhook URL (গোপন রাখুন)",
+  "ob.sync.urlOnceWarning": "এই URL শুধু একবার দেখাবে। এখনই Apps Script-এ কপি করুন — হারিয়ে গেলে Rotate চাপুন।",
+  "ob.sync.urlHidden": "Webhook URL সেট আছে, কিন্তু নিরাপত্তার কারণে আর দেখানো হবে না। আবার দরকার হলে নিচে \"Rotate token\" চাপুন।",
+  "ob.sync.snippetLabel": "Google Apps Script snippet (আপনার URL ইতিমধ্যে বসানো আছে)",
+  "ob.sync.copy": "URL কপি",
+  "ob.sync.copySnippet": "Snippet কপি",
+  "ob.sync.copied": "কপি হয়েছে!",
+  "ob.sync.howTo":
+    "১. আপনার Google Sheet খুলুন।\n" +
+    "২. Extensions → Apps Script-এ যান।\n" +
+    "৩. সেখানে থাকা কোড মুছে উপরের snippet পেস্ট করুন, 💾 আইকনে save করুন।\n" +
+    "৪. Apps Script বন্ধ করে শীটটি reload করুন।\n" +
+    "৫. নতুন \"DokanAI\" মেনুতে গিয়ে \"Setup auto-sync\" চাপুন। Google জিজ্ঞেস করলে authorize করুন।\n" +
+    "৬. শেষ — প্রতিটি এডিট ~৩০ সেকেন্ডের মধ্যে সিঙ্ক হবে।",
+  "ob.sync.refresh": "স্ট্যাটাস রিফ্রেশ",
+  "ob.sync.rotate": "Token rotate",
+  "ob.sync.disconnect": "Disconnect",
+  "ob.sync.confirmRotate": "Token rotate করবেন? পুরনো URL সাথে সাথে অকার্যকর হবে — নতুনটি Apps Script-এ পেস্ট করতে হবে।",
+  "ob.sync.confirmDisconnect": "লাইভ সিঙ্ক বন্ধ করবেন? বর্তমান URL সাথে সাথে অকার্যকর হবে। আগের সিঙ্ক করা ডেটা থেকে যাবে।",
 
   // Photos uploader
   "ob.photos.dropTitle": "ছবি এখানে drop করুন, অথবা ক্লিক করে বাছুন",

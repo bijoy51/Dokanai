@@ -1,25 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { FileSpreadsheet, FileText, Images } from "lucide-react";
+import { FileSpreadsheet, FileText, Images, PlugZap } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { KhataUploader } from "./KhataUploader";
 import { PhotoUploader } from "./PhotoUploader";
 import { PdfUploader } from "./PdfUploader";
+import { LiveSyncPanel } from "./LiveSyncPanel";
 
 /**
  * Tabbed shell for Khata-to-Cloud onboarding.
  *
- * Three import paths:
- *   - CSV    -> the existing KhataUploader (unchanged behavior + flow)
- *   - Photos -> PhotoUploader: 1-8 images -> /api/import/extract via OpenAI Vision
- *   - PDF    -> PdfUploader:   1 PDF      -> /api/import/extract via pdf-parse + OpenAI
+ * Four import paths:
+ *   - CSV       -> the existing KhataUploader (unchanged behavior + flow)
+ *   - Photos    -> PhotoUploader: 1-8 images -> /api/import/extract via OpenAI Vision
+ *   - PDF       -> PdfUploader:   1 PDF      -> /api/import/extract via pdf-parse + OpenAI
+ *   - Live Sync -> LiveSyncPanel: pushes from a Google Sheet via Apps Script
+ *                  every time the sheet is edited (~30s debounce).
  *
  * Each tab is independent — switching between tabs preserves whatever the
  * user had selected (files stay in component state, errors stay localised
  * to the tab) until they actually submit and replace the dataset.
  */
-type TabKey = "csv" | "photos" | "pdf";
+type TabKey = "csv" | "photos" | "pdf" | "live";
 
 export function OnboardingTabs({ locale }: { locale: Locale }) {
   const [tab, setTab] = useState<TabKey>("csv");
@@ -46,6 +49,12 @@ export function OnboardingTabs({ locale }: { locale: Locale }) {
           Icon={FileText}
           label={t("ob.tab.pdf", locale)}
         />
+        <TabButton
+          active={tab === "live"}
+          onClick={() => setTab("live")}
+          Icon={PlugZap}
+          label={t("ob.tab.live", locale)}
+        />
       </div>
 
       {/* Per-tab help text */}
@@ -53,11 +62,13 @@ export function OnboardingTabs({ locale }: { locale: Locale }) {
         {tab === "csv" && t("ob.tab.csvHint", locale)}
         {tab === "photos" && t("ob.tab.photosHint", locale)}
         {tab === "pdf" && t("ob.tab.pdfHint", locale)}
+        {tab === "live" && t("ob.tab.liveHint", locale)}
       </p>
 
       {tab === "csv" && <KhataUploader locale={locale} />}
       {tab === "photos" && <PhotoUploader locale={locale} />}
       {tab === "pdf" && <PdfUploader locale={locale} />}
+      {tab === "live" && <LiveSyncPanel locale={locale} />}
     </div>
   );
 }
