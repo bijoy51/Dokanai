@@ -130,7 +130,7 @@ export function VoiceMic({ locale }: { locale: Locale }) {
       const res = await fetch("/api/voice-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ q }),
+        body: JSON.stringify({ q, locale }),
       });
       const data: { text?: string; detectedLang?: Locale; error?: string } =
         await res.json().catch(() => ({}));

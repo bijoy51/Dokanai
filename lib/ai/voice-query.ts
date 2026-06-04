@@ -1,19 +1,130 @@
 import { computeOverview } from "./overview";
-import { rfmScores, segmentBreakdown } from "./churn";
+import { segmentBreakdown } from "./churn";
 import { forecastAll } from "./forecast";
 import { festivalCalendar } from "./forecast";
 import type { Locale } from "@/lib/i18n/messages";
 
-/** Lightweight intent classifier for short Bangla / English questions. */
-function detectIntent(q: string): { intent: string; lang: Locale } {
-  const s = q.toLowerCase();
-  // Bangla script (definitive) or unambiguous Bangla phonetic markers.
-  // Avoid overlapping English words like "top" / "ki" / "koto".
-  const bnPhonetic = ["bikri", "bikiri", "kotota", "aaj koto", "sobcheye", "shobcheye", "shera", "okhane", "aamar dokan"];
+/**
+ * Romanized-Bengali markers ("Banglish") that strongly indicate the speaker
+ * wanted Bengali. We keep this conservative — only tokens that have ~no
+ * collision with normal English words. `ki` alone is too weak (collides
+ * with "kid", "kit"), so it's only detected as part of multi-word phrases
+ * like "tumi ki", "apni ki", "ki bolo", "ki ache".
+ *
+ * Multi-word entries are matched as substrings; single-word entries are
+ * matched as whole word tokens via \b boundaries so we don't false-positive
+ * on e.g. "amine" → "ami".
+ */
+const BN_PHONETIC_WORDS = [
+  // pronouns
+  "tumi", "ami", "amar", "tomar", "amra", "tomra", "apni", "apnar", "amake", "tomake", "apnara",
+  // common verbs / aux
+  "bolo", "bole", "bolen", "bolte", "boleche", "bolchhe",
+  "ache", "achen", "ashe", "ashen", "ashben", "asbo", "korbo", "korben", "korchen", "korchi",
+  "bujhi", "bujho", "bujhen", "bujhte", "paro", "paren", "parо",
+  "shuni", "shuno", "khache", "khaben",
+  // greetings + courtesy
+  "salam", "namashkar", "namaskar", "dhonnobad", "dhonyobad", "dhonyabad",
+  // question/wh words (multi-letter, low collision)
+  "kemon", "kothay", "kobe", "keno", "kake",
+  // domain nouns
+  "bikri", "bikiri", "bangla", "bengali", "bangali", "dokan", "khoddor", "khodder",
+  // adverbs / phrases from old list
+  "sobcheye", "shobcheye", "shera", "okhane",
+];
+
+const BN_PHONETIC_PHRASES = [
+  "aaj koto",
+  "kotota",
+  "kemon achen",
+  "kemon acho",
+  "kemon achi",
+  "tumi ki",
+  "apni ki",
+  "ki ache",
+  "ki khobor",
+  "ki bolo",
+  "ki bolen",
+  "ki korben",
+  "kothay theke",
+  "bangla bolo",
+  "bangla bolte",
+  "bangla bujho",
+  "bangla bujhte",
+  "bangla paro",
+  "bangla parо",
+  "bangla janen",
+  "bangla bujhen",
+  "aamar dokan",
+  "amar customer",
+];
+
+function hasBnPhonetic(text: string): boolean {
+  const lower = text.toLowerCase();
+  if (BN_PHONETIC_PHRASES.some((p) => lower.includes(p))) return true;
+  for (const w of BN_PHONETIC_WORDS) {
+    // Whole-word check; tolerate punctuation around the token.
+    const re = new RegExp(`(^|[^a-z])${w}([^a-z]|$)`, "i");
+    if (re.test(lower)) return true;
+  }
+  return false;
+}
+
+/** Returns true if the text has unambiguous English signal words. Used as
+ *  a tie-breaker when the user is on a Bengali UI but spoke English. */
+function hasStrongEnglishSignal(text: string): boolean {
+  return /\b(today|tomorrow|how|what|which|why|when|where|tell|show|please|the|and|with|from|about)\b/i.test(
+    text,
+  );
+}
+
+/** Lightweight intent classifier for short Bangla / English questions.
+ *
+ *  `uiLocale` is the locale the user has selected in the UI (en/bn). It is
+ *  used ONLY when the text itself has no clear language signal — at which
+ *  point we default to whatever the user picked. Spoken text with Bangla
+ *  script or Banglish markers always wins. */
+function detectIntent(q: string, uiLocale: Locale): { intent: string; lang: Locale } {
   const hasBnScript = /[ঀ-৿]/.test(q);
-  const hasBnPhonetic = bnPhonetic.some((t) => s.includes(t));
-  const isBn = hasBnScript || hasBnPhonetic;
-  const lang: Locale = isBn ? "bn" : "en";
+  const hasBnPhon = hasBnPhonetic(q);
+  const hasEng = hasStrongEnglishSignal(q);
+
+  let lang: Locale;
+  if (hasBnScript || hasBnPhon) lang = "bn";
+  else if (hasEng) lang = "en";
+  else lang = uiLocale;
+
+  // --- Conversational intents (checked BEFORE the data intents) ---
+
+  // "do you speak Bengali?" / "tumi ki bangla bolo?" / "bangla bolte paro?"
+  // / "বাংলা বলতে পারো?" — reply in Bengali no matter what.
+  if (
+    /\b(bangla|bengali|বাংলা)\b/i.test(q) &&
+    /(speak|bolo|bolte|bujho|bujhte|janen|paro|parо|paren|know|understand|talk)/i.test(q)
+  ) {
+    return { intent: "language", lang: "bn" };
+  }
+
+  // "who are you?" / "what can you do?" / "tumi ke?" / "তুমি কে?"
+  if (
+    /\b(who are you|what are you|what can you do|what do you do|your name|tomar nam|tumi ke|tumi kara|nam ki|তুমি কে|তোমার নাম|কী করো|কী করতে পারো)\b/i.test(
+      q,
+    )
+  ) {
+    return { intent: "identity", lang };
+  }
+
+  // greetings
+  if (/(^|\s)(hi|hello|hey|assalamu|salam|namaskar|namashkar|হ্যালো|হাই|সালাম|নমস্কার)(\s|!|\?|$)/i.test(q)) {
+    return { intent: "greeting", lang };
+  }
+
+  // thanks
+  if (/\b(thanks?|thank you|dhonnobad|dhonyobad|dhonyabad|ধন্যবাদ)\b/i.test(q)) {
+    return { intent: "thanks", lang };
+  }
+
+  // --- Data intents (existing) ---
 
   if (/(top|সেরা|best.?selling|sera|top.?seller|sobcheye)/i.test(q)) return { intent: "top_product", lang };
   if (/(rto|return|ফেরত|return rate)/i.test(q)) return { intent: "rto", lang };
@@ -24,6 +135,7 @@ function detectIntent(q: string): { intent: string; lang: Locale } {
   if (/(orders|কতটা.?অর্ডার|how many orders|order count)/i.test(q)) return { intent: "orders", lang };
   if (/(customer|ক্রেতা|গ্রাহক)/i.test(q)) return { intent: "customers", lang };
   if (/(forecast|পূর্বাভাস|next week|আগামী)/i.test(q)) return { intent: "forecast", lang };
+
   return { intent: "fallback", lang };
 }
 
@@ -33,8 +145,50 @@ export interface VoiceAnswer {
   intent: string;
 }
 
-export function answerQuery(question: string): VoiceAnswer {
-  const { intent, lang } = detectIntent(question);
+export function answerQuery(question: string, uiLocale: Locale = "en"): VoiceAnswer {
+  const { intent, lang } = detectIntent(question, uiLocale);
+
+  // ---------------- conversational intents ----------------
+
+  if (intent === "language") {
+    return {
+      intent,
+      detectedLang: "bn",
+      text: "হ্যাঁ, আমি বাংলায় কথা বলতে পারি। আপনি বাংলায় বা ইংরেজিতে বিক্রি, অর্ডার, ক্রেতা, স্টক, RTO, পূর্বাভাস ও উৎসব নিয়ে প্রশ্ন করতে পারেন।",
+    };
+  }
+
+  if (intent === "identity") {
+    return {
+      intent,
+      detectedLang: lang,
+      text:
+        lang === "bn"
+          ? "আমি DokanAI-এর ভয়েস কো-পাইলট। আপনি বিক্রি, অর্ডার, ক্রেতা, স্টক, RTO, পূর্বাভাস ও উৎসব নিয়ে আমাকে প্রশ্ন করতে পারেন।"
+          : "I am DokanAI's voice co-pilot. Ask me about revenue, orders, customers, stock, RTO, forecasts, and festivals.",
+    };
+  }
+
+  if (intent === "greeting") {
+    return {
+      intent,
+      detectedLang: lang,
+      text:
+        lang === "bn"
+          ? "সালাম! আজ কীভাবে সাহায্য করতে পারি?"
+          : "Hi! How can I help you today?",
+    };
+  }
+
+  if (intent === "thanks") {
+    return {
+      intent,
+      detectedLang: lang,
+      text: lang === "bn" ? "স্বাগতম! আরও কিছু জিজ্ঞেস করুন।" : "You're welcome! Ask me anything else.",
+    };
+  }
+
+  // ---------------- data intents ----------------
 
   if (intent === "revenue") {
     const m = computeOverview();
