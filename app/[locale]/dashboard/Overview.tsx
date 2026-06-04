@@ -49,12 +49,12 @@ export default function OverviewPage({ params }: { params: { locale: string } })
 
       <StockoutAlert locale={locale} />
 
-      <MarketTrendsPanel locale={locale} />
-
       <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
         <div className="text-sm font-medium mb-2">{t("overview.chart.title", locale)}</div>
         <RevenueChart data={m.daily.map((d) => ({ date: d.date, revenue: d.revenue }))} />
       </section>
+
+      <MarketTrendsPanel locale={locale} />
 
       <section className="mt-6 rounded-lg border border-slate-200 bg-white">
         <div className="px-4 py-3 border-b border-slate-200 text-sm font-medium">
