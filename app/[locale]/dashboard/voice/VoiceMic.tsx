@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Volume2 } from "lucide-react";
+import { AlertCircle, Mic, MicOff, Volume2 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 
-// Minimal SpeechRecognition typings (Web Speech API)
+// Minimal SpeechRecognition typings (Web Speech API).
 type SR = any;
 
 const EXAMPLES_EN = [
@@ -22,12 +22,40 @@ const EXAMPLES_BN = [
   "ঝুঁকিতে কতজন ক্রেতা?",
 ];
 
+/** Map raw SpeechRecognition error codes to localised, actionable messages. */
+function recognitionErrorKey(code: string): string {
+  switch (code) {
+    case "not-allowed":
+    case "service-not-allowed":
+      return "voice.err.permission";
+    case "no-speech":
+      return "voice.err.noSpeech";
+    case "audio-capture":
+      return "voice.err.noMic";
+    case "network":
+      return "voice.err.network";
+    case "language-not-supported":
+      return "voice.err.langUnsupported";
+    case "aborted":
+      // User-cancelled — not a real error, surface nothing.
+      return "";
+    default:
+      return "voice.err.generic";
+  }
+}
+
 export function VoiceMic({ locale }: { locale: Locale }) {
   const [supported, setSupported] = useState<boolean | null>(null);
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  // If bn-BD turns out to be unavailable on this device, we silently fall
+  // back to en-US and remember it so we don't keep retrying Bangla.
+  const [recogLang, setRecogLang] = useState<"bn-BD" | "en-US">(
+    locale === "bn" ? "bn-BD" : "en-US",
+  );
   const recognitionRef = useRef<SR | null>(null);
 
   useEffect(() => {
@@ -40,7 +68,7 @@ export function VoiceMic({ locale }: { locale: Locale }) {
     }
     setSupported(true);
     const rec: SR = new SpeechRecognition();
-    rec.lang = locale === "bn" ? "bn-BD" : "en-US";
+    rec.lang = recogLang;
     rec.interimResults = false;
     rec.maxAlternatives = 1;
     rec.onresult = (event: any) => {
@@ -48,20 +76,45 @@ export function VoiceMic({ locale }: { locale: Locale }) {
       setHeard(text);
       askServer(text);
     };
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e: any) => {
+      setListening(false);
+      const code: string = e?.error || "";
+      // Bangla recognizer missing on this device — switch to English and
+      // tell the user once, instead of failing every attempt.
+      if (code === "language-not-supported" && rec.lang === "bn-BD") {
+        setRecogLang("en-US");
+        setError(t("voice.err.bnFallback", locale));
+        return;
+      }
+      const key = recognitionErrorKey(code);
+      if (key) setError(t(key, locale));
+    };
     rec.onend = () => setListening(false);
     recognitionRef.current = rec;
-  }, [locale]);
+    // Re-creating the recognizer when locale or recogLang changes is cheap;
+    // we keep the same `recognitionRef` so start/stop bindings stay valid.
+    return () => {
+      try {
+        rec.abort?.();
+      } catch {
+        /* recognizer might already be torn down */
+      }
+    };
+  }, [locale, recogLang]);
 
   const start = () => {
     if (!recognitionRef.current) return;
     setHeard("");
     setAnswer("");
+    setError("");
     setListening(true);
     try {
       recognitionRef.current.start();
-    } catch {
+    } catch (e) {
+      // .start() throws InvalidStateError if a previous session is still
+      // running. Surface it instead of silently snapping back to idle.
       setListening(false);
+      setError(t("voice.err.generic", locale));
     }
   };
 
@@ -72,21 +125,34 @@ export function VoiceMic({ locale }: { locale: Locale }) {
 
   const askServer = async (q: string) => {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/voice-query", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ q }),
       });
-      const data = await res.json();
-      setAnswer(data.text);
-      // TTS
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        const utter = new SpeechSynthesisUtterance(data.text);
-        utter.lang = data.detectedLang === "bn" ? "bn-BD" : "en-US";
-        utter.rate = 0.95;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utter);
+      const data: { text?: string; detectedLang?: Locale; error?: string } =
+        await res.json().catch(() => ({}));
+      if (!res.ok || !data.text) {
+        setError(data.error || t("voice.err.server", locale));
+        return;
       }
+      setAnswer(data.text);
+      // Speak the reply if the browser supports TTS.
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        try {
+          const utter = new SpeechSynthesisUtterance(data.text);
+          utter.lang = data.detectedLang === "bn" ? "bn-BD" : "en-US";
+          utter.rate = 0.95;
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utter);
+        } catch {
+          /* TTS is a nice-to-have — never fail the answer because of it */
+        }
+      }
+    } catch {
+      setError(t("voice.err.server", locale));
     } finally {
       setLoading(false);
     }
@@ -97,7 +163,8 @@ export function VoiceMic({ locale }: { locale: Locale }) {
   return (
     <div className="space-y-6">
       {supported === false && (
-        <div className="rounded-md bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 text-sm">
+        <div className="rounded-md bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           {t("voice.unsupported", locale)}
         </div>
       )}
@@ -106,6 +173,7 @@ export function VoiceMic({ locale }: { locale: Locale }) {
         <button
           onClick={listening ? stop : start}
           disabled={supported === false}
+          aria-label={listening ? t("voice.listening", locale) : t("voice.tap", locale)}
           className={`relative w-28 h-28 rounded-full grid place-items-center transition shadow-md ${
             listening ? "bg-rose-500 animate-pulse" : "bg-brand-600 hover:bg-brand-700"
           } text-white disabled:opacity-50`}
@@ -116,14 +184,26 @@ export function VoiceMic({ locale }: { locale: Locale }) {
           {listening ? t("voice.listening", locale) : t("voice.tap", locale)}
         </div>
         <div className="mt-1 text-xs text-slate-500">{t("voice.hint", locale)}</div>
+        {recogLang === "en-US" && locale === "bn" && (
+          <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1">
+            {t("voice.err.bnFallbackTag", locale)}
+          </div>
+        )}
       </div>
+
+      {error && (
+        <div className="rounded-md bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          {error}
+        </div>
+      )}
 
       {(heard || answer || loading) && (
         <div className="rounded-lg border border-slate-200 bg-white p-5 space-y-3">
           {heard && (
             <div>
               <div className="text-[11px] uppercase text-slate-500">{t("voice.heard", locale)}</div>
-              <div className="mt-1">"{heard}"</div>
+              <div className="mt-1">&ldquo;{heard}&rdquo;</div>
             </div>
           )}
           {loading && <div className="text-sm text-slate-500">{t("common.loading", locale)}</div>}
@@ -146,6 +226,8 @@ export function VoiceMic({ locale }: { locale: Locale }) {
               key={q}
               onClick={() => {
                 setHeard(q);
+                setAnswer("");
+                setError("");
                 askServer(q);
               }}
               className="text-xs px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-50"
