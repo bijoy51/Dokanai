@@ -3,6 +3,7 @@ import { RevenueChart } from "@/components/charts/RevenueChart";
 import { StatusPill } from "@/components/StatusPill";
 import { StockoutAlert } from "@/components/StockoutAlert";
 import { MarketTrendsPanel } from "@/components/MarketTrendsPanel";
+import { LocationRecommendationsPanel } from "@/components/LocationRecommendationsPanel";
 import { computeOverview, recentOrders } from "@/lib/ai/overview";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatNumber, formatPercent } from "@/lib/utils";
@@ -53,6 +54,8 @@ export default function OverviewPage({ params }: { params: { locale: string } })
         <div className="text-sm font-medium mb-2">{t("overview.chart.title", locale)}</div>
         <RevenueChart data={m.daily.map((d) => ({ date: d.date, revenue: d.revenue }))} />
       </section>
+
+      <LocationRecommendationsPanel locale={locale} />
 
       <MarketTrendsPanel locale={locale} />
 
