@@ -5,12 +5,15 @@ import {
   recordSync,
 } from "@/lib/sheetSync/store";
 import {
-  buildDataset,
+  getImported,
+  hydrateImported,
+  mergeDataset,
   persistImported,
   setImported,
   type RawProduct,
   type RawSale,
 } from "@/lib/data/imported";
+import { hydrateUploadHistory, recordUpload } from "@/lib/data/upload-history";
 
 /**
  * POST /api/import/webhook/[shopId]?token=...
@@ -24,12 +27,17 @@ import {
  *   Same canonical shape as the existing /api/import endpoint.
  *
  * Semantics:
- *   - This is a REPLACE, not a merge. Each push is treated as the
- *     latest snapshot of the user's spreadsheet. The Apps Script
- *     snippet sends the FULL sheet on every edit; we rebuild the
- *     dataset from it and persist. Idempotent + simple.
+ *   - APPEND-only merge. Each push is folded into the existing dataset
+ *     via mergeDataset(). Order signatures dedupe re-pushes of the same
+ *     sheet (the Apps Script sends the FULL sheet on every edit, so
+ *     this is what stops duplicates). Old data is preserved across
+ *     uploads — old rows the shopkeeper deleted in their sheet stay
+ *     in DokanAI's history.
  *   - On error, we record the message in sheet-sync state so the UI
  *     can show "Last error: …" to the user.
+ *   - An UploadEvent is recorded only when the merge actually added
+ *     something (delta > 0), so the 20-second debounce doesn't spam
+ *     the Uploads history with no-op syncs.
  *
  * Why no /api/agent or /api/auth-style cookie check: this URL needs to be
  * callable from an external service (Google's servers running the Apps
@@ -97,7 +105,10 @@ export async function POST(req: Request, { params }: { params: { shopId: string 
   }
 
   try {
-    const dataset = buildDataset(products, sales);
+    await hydrateImported(email);
+    await hydrateUploadHistory(email);
+    const existing = getImported(email);
+    const { dataset, delta } = mergeDataset(existing, products, sales);
     if (dataset.products.length === 0) {
       const msg = "No usable products found in the synced rows. Check that your sheet has the right column headers.";
       await recordError(email, msg);
@@ -106,14 +117,32 @@ export async function POST(req: Request, { params }: { params: { shopId: string 
     setImported(email, dataset);
     await persistImported(email, dataset);
     await recordSync(email, products.length + sales.length);
-    return NextResponse.json({
-      ok: true,
-      counts: {
-        products: dataset.products.length,
-        customers: dataset.customers.length,
-        orders: dataset.orders.length,
-      },
-    });
+
+    const totals = {
+      products: dataset.products.length,
+      customers: dataset.customers.length,
+      orders: dataset.orders.length,
+    };
+
+    // Only record an upload event when the merge actually changed anything,
+    // so the Uploads history isn't flooded by debounced no-op syncs.
+    const changed =
+      delta.productsAdded +
+        delta.productsUpdated +
+        delta.customersAdded +
+        delta.ordersAdded >
+      0;
+    if (changed) {
+      await recordUpload(email, {
+        source: "live-sync",
+        status: "ok",
+        delta,
+        totals,
+        note: "Google Sheet push",
+      });
+    }
+
+    return NextResponse.json({ ok: true, counts: totals, delta });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Internal error while ingesting sync payload.";
     await recordError(email, msg);

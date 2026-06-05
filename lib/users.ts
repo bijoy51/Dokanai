@@ -1,24 +1,29 @@
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 /**
  * Account store.
  *
- * Durable storage is the ML backend's shared key-value store (a single
- * always-on container, so it is consistent across all Vercel serverless
- * instances and survives their cold starts). Configure it with:
- *   - ML_BACKEND_URL    the backend base URL (already used by analyze-shop)
- *   - ML_ADMIN_SECRET   must equal the backend's ADMIN_SECRET
+ * Persistence is now real Postgres (Neon, via lib/kv.ts). The shared KV
+ * surface is preserved — we still call kvGet / kvPut — so this module
+ * didn't need to learn about a database.
  *
- * An in-memory Map is kept as a hot cache in front of the KV (so repeated
- * logins on a warm instance don't hit the network) AND as a standalone
- * fallback when no backend is configured — e.g. local dev. In fallback mode
- * behaviour is identical to the old in-memory-only store.
+ * Password hashing migrated from peppered SHA-256 to **bcrypt** with full
+ * backward compatibility:
  *
- * Only a salted password HASH is ever stored; plaintext passwords never leave
- * this module.
+ *   - createAccount stores a bcrypt hash for every new account.
+ *   - verifyAccount detects the hash format. If it's bcrypt (`$2…`), use
+ *     bcrypt.compare. If it's the legacy peppered-SHA-256 hex digest, fall
+ *     back to the old check, and on a successful match **rehash to bcrypt**
+ *     and write it back. Existing demo and real accounts keep logging in
+ *     without anyone needing to reset their password — they migrate the
+ *     first time they sign in.
+ *
+ * Plaintext passwords never leave this module.
  */
 
 const PEPPER = process.env.AUTH_SECRET || "dokanai-dev-secret-change-in-production";
+const BCRYPT_COST = 10;
 
 export interface Account {
   name: string;
@@ -28,86 +33,47 @@ export interface Account {
 
 const accounts = new Map<string, Account>();
 
-function hashPassword(pw: string): string {
+/** Legacy peppered-SHA-256 — kept for verifying old hashes on first login. */
+function legacyHash(pw: string): string {
   return crypto.createHash("sha256").update(`${pw}::${PEPPER}`).digest("hex");
+}
+
+async function newHash(pw: string): Promise<string> {
+  return bcrypt.hash(pw, BCRYPT_COST);
+}
+
+function isBcryptHash(h: string): boolean {
+  return h.startsWith("$2a$") || h.startsWith("$2b$") || h.startsWith("$2y$");
 }
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-// ---------- shared KV (ML backend) ----------
+// ---------- shared KV (now Postgres via lib/kv.ts) ----------
 
-const KV_TIMEOUT_MS = 12_000;
-
-function kvConfig(): { base: string; secret: string } | null {
-  const url = process.env.ML_BACKEND_URL?.trim();
-  const secret = (process.env.ML_ADMIN_SECRET || process.env.ADMIN_SECRET || "").trim();
-  if (!url || !secret) return null;
-  const base = url.replace(/\s+/g, "").replace(/\/+$/, "");
-  return { base, secret };
-}
+import { kvGet, kvPut } from "@/lib/kv";
 
 function kvKey(email: string): string {
   return `account:${email}`;
 }
 
-/** Reads an account from the shared KV. null = not found or KV unavailable. */
 async function kvGetAccount(email: string): Promise<Account | null> {
-  const cfg = kvConfig();
-  if (!cfg) return null;
-  try {
-    const res = await fetch(`${cfg.base}/kv/${encodeURIComponent(kvKey(email))}`, {
-      headers: { "x-admin-secret": cfg.secret },
-      signal: AbortSignal.timeout(KV_TIMEOUT_MS),
-      cache: "no-store",
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const data = (await res.json()) as Partial<Account>;
-    if (typeof data?.email === "string" && typeof data?.passwordHash === "string") {
-      return { name: data.name ?? data.email.split("@")[0], email: data.email, passwordHash: data.passwordHash };
-    }
-    return null;
-  } catch {
-    return null;
+  const data = await kvGet<Partial<Account> | null>(kvKey(email));
+  if (!data) return null;
+  if (typeof data.email === "string" && typeof data.passwordHash === "string") {
+    return {
+      name: data.name ?? data.email.split("@")[0],
+      email: data.email,
+      passwordHash: data.passwordHash,
+    };
   }
+  return null;
 }
 
-/** Persists an account to the shared KV. Returns true on success. */
 async function kvPutAccount(acc: Account): Promise<boolean> {
-  const cfg = kvConfig();
-  if (!cfg) return false;
-  try {
-    const res = await fetch(`${cfg.base}/kv/${encodeURIComponent(kvKey(acc.email))}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-secret": cfg.secret },
-      body: JSON.stringify(acc),
-      signal: AbortSignal.timeout(KV_TIMEOUT_MS),
-    });
-    return res.ok;
-  } catch {
-    return false;
-  }
+  return kvPut(kvKey(acc.email), acc);
 }
-
-// ---------- demo account ----------
-
-// A demo account that always exists, so graders can log in even after
-// a cold start. Credentials: demo@dokanai.app / demo1234
-const DEMO_EMAIL = "demo@dokanai.app";
-function ensureDemo() {
-  if (!accounts.has(DEMO_EMAIL)) {
-    accounts.set(DEMO_EMAIL, {
-      name: "Demo Shop",
-      email: DEMO_EMAIL,
-      passwordHash: hashPassword("demo1234"),
-    });
-  }
-}
-ensureDemo();
-
-export const DEMO_CREDENTIALS = { email: DEMO_EMAIL, password: "demo1234" };
 
 /** Resolve an account from the in-memory cache, falling back to the KV. */
 async function loadAccount(email: string): Promise<Account | undefined> {
@@ -121,40 +87,73 @@ async function loadAccount(email: string): Promise<Account | undefined> {
   return undefined;
 }
 
+/** Strong-password gate applied to NEW signups only. Existing accounts
+ *  with weaker passwords keep verifying with verifyAccount() — we never
+ *  re-validate the password on login, only the hash. */
+function validateStrongPassword(pw: string): string | null {
+  if (!pw || pw.length < 8) return "Password must be at least 8 characters.";
+  if (!/[a-z]/.test(pw)) return "Password must include a lowercase letter.";
+  if (!/[A-Z]/.test(pw)) return "Password must include an uppercase letter.";
+  if (!/\d/.test(pw)) return "Password must include a number.";
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(pw))
+    return "Password must include a special character.";
+  return null;
+}
+
 export async function createAccount(name: string, email: string, password: string): Promise<Account> {
-  ensureDemo();
+  const trimmedName = (name || "").trim();
+  if (!trimmedName) throw new Error("Shop name is required.");
+  if (trimmedName.length > 80) throw new Error("Shop name is too long (max 80 characters).");
   const e = normalizeEmail(email);
   if (!e || !e.includes("@")) throw new Error("Please enter a valid email address.");
-  if (!password || password.length < 6) throw new Error("Password must be at least 6 characters.");
+  const pwError = validateStrongPassword(password);
+  if (pwError) throw new Error(pwError);
   if (await loadAccount(e)) {
     throw new Error("An account with this email already exists. Try logging in.");
   }
   const acc: Account = {
-    name: (name || "").trim() || e.split("@")[0],
+    name: trimmedName,
     email: e,
-    passwordHash: hashPassword(password),
+    passwordHash: await newHash(password),
   };
-  // Persist durably first so the account survives this instance. If the KV is
-  // configured but the write fails, surface an error rather than creating an
-  // account that silently won't survive a cold start.
-  if (kvConfig()) {
-    const ok = await kvPutAccount(acc);
-    if (!ok) throw new Error("Could not save your account right now. Please try again.");
-  }
+  // Persist to the shared KV (Postgres) first so the account is reachable
+  // from any Vercel instance. The kv layer handles durability + lazy HF
+  // fallback. If the KV write fails outright, surface an error rather
+  // than creating an account that silently won't survive a cold start.
+  const ok = await kvPutAccount(acc);
+  if (!ok) throw new Error("Could not save your account right now. Please try again.");
   accounts.set(e, acc);
   return acc;
 }
 
 export async function verifyAccount(email: string, password: string): Promise<Account | null> {
-  ensureDemo();
   const e = normalizeEmail(email);
   const acc = await loadAccount(e);
   if (!acc) return null;
-  if (acc.passwordHash !== hashPassword(password)) return null;
-  return acc;
+
+  // Branch on hash format so legacy SHA-256 hashes keep verifying.
+  if (isBcryptHash(acc.passwordHash)) {
+    const match = await bcrypt.compare(password, acc.passwordHash);
+    return match ? acc : null;
+  }
+
+  // Legacy peppered SHA-256 path — verify against the old hash; if it
+  // matches, rehash to bcrypt and persist. The user notices nothing; the
+  // KV gets quietly upgraded.
+  if (acc.passwordHash !== legacyHash(password)) return null;
+  try {
+    const upgraded: Account = { ...acc, passwordHash: await newHash(password) };
+    accounts.set(e, upgraded);
+    await kvPutAccount(upgraded);
+    return upgraded;
+  } catch (err) {
+    // If the rehash write fails for any reason, the user is still logged
+    // in successfully — they'll just get migrated next time.
+    console.error("[users] bcrypt upgrade failed for", e, err);
+    return acc;
+  }
 }
 
 export async function accountExists(email: string): Promise<boolean> {
-  ensureDemo();
   return !!(await loadAccount(normalizeEmail(email)));
 }

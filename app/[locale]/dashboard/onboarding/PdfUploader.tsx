@@ -90,7 +90,7 @@ export function PdfUploader({ locale }: { locale: Locale }) {
       const res = await fetch("/api/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ products: extracted.products, sales: extracted.sales }),
+        body: JSON.stringify({ products: extracted.products, sales: extracted.sales, source: "pdf" }),
       });
       const data = await res.json();
       if (!res.ok) {

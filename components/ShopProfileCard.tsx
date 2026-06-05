@@ -3,22 +3,15 @@
 import { useEffect, useState } from "react";
 import { Check, Loader2, MapPin, Store, AlertCircle, Pencil } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
-import {
-  SHOP_TYPE_LABELS,
-  VENUE_TYPE_LABELS,
-} from "@/lib/ai/location-demand";
-import type {
-  ShopProfile,
-  ShopType,
-  VenueType,
-} from "@/lib/data/shop-profile";
+import { VENUE_TYPE_LABELS } from "@/lib/ai/location-demand";
+import type { ShopProfile, VenueType } from "@/lib/data/shop-profile";
 
 /**
  * Editable shop-profile card. Owns its own form state and persists via
- * /api/shop-profile. Mounted at the top of the Khata-to-Cloud onboarding
- * page so the shopkeeper sees the same prompt regardless of which import
- * tab they pick. The profile applies to all import paths (CSV / Photos /
- * PDF / Live Sync) and downstream recommendation surfaces.
+ * /api/shop-profile. Lives at the top of the Khata-to-Cloud onboarding
+ * page so the shopkeeper sees it regardless of which import tab they
+ * pick. The profile is location-only — shop type is auto-detected from
+ * the imported catalog (see detectShopType in lib/ai/location-demand.ts).
  */
 export function ShopProfileCard({ locale }: { locale: Locale }) {
   const [profile, setProfile] = useState<ShopProfile | null>(null);
@@ -29,7 +22,6 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
   const [saved, setSaved] = useState(false);
 
   // form state
-  const [shopType, setShopType] = useState<ShopType | "">("");
   const [venueType, setVenueType] = useState<VenueType | "">("");
   const [city, setCity] = useState("");
   const [area, setArea] = useState("");
@@ -44,7 +36,6 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
         if (data.profile) {
           const p = data.profile as ShopProfile;
           setProfile(p);
-          setShopType(p.shopType);
           setVenueType(p.venueType);
           setCity(p.city ?? "");
           setArea(p.area ?? "");
@@ -66,7 +57,7 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
   const save = async () => {
     setError("");
     setSaved(false);
-    if (!shopType || !venueType) {
+    if (!venueType) {
       setError(t("shopProfile.errRequired", locale));
       return;
     }
@@ -75,7 +66,7 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
       const res = await fetch("/api/shop-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopType, venueType, city, area }),
+        body: JSON.stringify({ venueType, city, area }),
       });
       const data = await res.json();
       if (!res.ok || !data.profile) {
@@ -111,7 +102,6 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
               <Store className="w-3.5 h-3.5" /> {t("shopProfile.title", locale)}
             </div>
             <div className="mt-1 text-base font-semibold text-brand-900">
-              {SHOP_TYPE_LABELS[profile.shopType][locale]} ·{" "}
               {VENUE_TYPE_LABELS[profile.venueType][locale]}
             </div>
             <div className="mt-0.5 text-xs text-brand-900/80 flex items-center gap-1">
@@ -148,22 +138,7 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
         {t("shopProfile.subtitle", locale)}
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-        <div>
-          <label className="text-xs text-slate-500">{t("shopProfile.shopType", locale)}</label>
-          <select
-            value={shopType}
-            onChange={(e) => setShopType(e.target.value as ShopType)}
-            className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">{t("shopProfile.choose", locale)}</option>
-            {(Object.keys(SHOP_TYPE_LABELS) as ShopType[]).map((k) => (
-              <option key={k} value={k}>
-                {SHOP_TYPE_LABELS[k][locale]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="grid grid-cols-1 gap-3 mb-3">
         <div>
           <label className="text-xs text-slate-500">{t("shopProfile.venueType", locale)}</label>
           <select
@@ -213,7 +188,7 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
         <button
           type="button"
           onClick={save}
-          disabled={saving || !shopType || !venueType}
+          disabled={saving || !venueType}
           className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-md px-4 py-2 disabled:opacity-50"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -224,7 +199,6 @@ export function ShopProfileCard({ locale }: { locale: Locale }) {
             type="button"
             onClick={() => {
               setEditing(false);
-              setShopType(profile.shopType);
               setVenueType(profile.venueType);
               setCity(profile.city);
               setArea(profile.area);

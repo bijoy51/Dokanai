@@ -55,8 +55,3 @@ export function verifySessionToken(token: string | undefined | null): Session | 
 export function getSession(): Session | null {
   return verifySessionToken(cookies().get(SESSION_COOKIE)?.value);
 }
-
-/** Stable per-account key used to seed that account's dataset. */
-export function userKeyFromSession(s: Session | null): string {
-  return s?.email ?? "demo@dokanai.app";
-}

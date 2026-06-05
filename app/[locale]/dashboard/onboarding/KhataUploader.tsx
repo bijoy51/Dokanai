@@ -22,7 +22,6 @@ const DATASET_KEY = "dokanai:dataset:v1";
 interface ImportStatus {
   email: string;
   hasData: boolean;
-  isDemo: boolean;
 }
 
 function parseCsv(text: string): Record<string, string>[] {
@@ -185,7 +184,7 @@ export function KhataUploader({ locale }: { locale: Locale }) {
         return;
       }
 
-      const bodyStr = JSON.stringify({ products, sales });
+      const bodyStr = JSON.stringify({ products, sales, source: "csv" });
       console.log(`${LOG} 4. POST /api/import`, {
         bodyBytes: bodyStr.length,
         bodyMB: (bodyStr.length / 1048576).toFixed(2),
@@ -245,15 +244,6 @@ export function KhataUploader({ locale }: { locale: Locale }) {
       setLoading(false);
     }
   };
-
-  // Demo account: read-only sample data.
-  if (status?.isDemo) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
-        {t("ob.demoNotice", locale)}
-      </div>
-    );
-  }
 
   if (done) {
     return (

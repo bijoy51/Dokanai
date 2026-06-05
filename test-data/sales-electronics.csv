@@ -1,0 +1,91 @@
+date,product,qty,unit_price,customer,email,consent,payment,status,city
+2026-06-03,Wireless Earbuds,1,2200,Salim Khan,salim@example.com,yes,cod,pending,Khulna
+2026-06-03,Phone Case,1,350,Salim Khan,salim@example.com,yes,cod,pending,Khulna
+2026-06-02,Power Bank 10000mAh,1,1500,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-06-02,USB Cable,2,200,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-06-01,Bluetooth Speaker,1,1800,Farhan Ahmed,farhan@example.com,yes,nagad,delivered,Dhaka
+2026-06-01,Wired Earphone,2,350,Farhan Ahmed,farhan@example.com,yes,nagad,delivered,Dhaka
+2026-05-31,Phone Charger,2,450,,,,cod,delivered,Dhaka
+2026-05-31,USB Cable,3,200,,,,cod,delivered,Dhaka
+2026-05-30,Smart Watch,1,2800,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-29,Wireless Earbuds,1,2200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-28,Power Bank 20000mAh,1,2400,Ripon Mia,ripon@example.com,yes,cod,pending,Barishal
+2026-05-28,Mobile Holder,1,300,Ripon Mia,ripon@example.com,yes,cod,pending,Barishal
+2026-05-27,Memory Card 64GB,1,950,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-27,Pen Drive 32GB,1,600,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-26,Headphone,1,1500,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-05-25,Power Bank 10000mAh,1,1500,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-25,Car Charger,1,550,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-24,LED Bulb,4,180,,,,cod,delivered,Dhaka
+2026-05-24,Smart Bulb,1,750,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-05-23,Wifi Router,1,2200,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-05-22,Phone Charger,2,450,,,,cod,delivered,Dhaka
+2026-05-21,Bluetooth Speaker,1,1800,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-20,Wireless Earbuds,1,2200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-19,Computer Mouse,1,650,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-05-19,Keyboard,1,1100,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-05-18,Extension Cord,2,550,Sabbir Hossain,sabbir@example.com,no,bkash,delivered,Khulna
+2026-05-17,Multiplug,3,350,,,,cod,delivered,Dhaka
+2026-05-16,Hair Dryer,1,1400,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-05-15,Phone Charger,2,450,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-14,Wireless Earbuds,1,2200,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-13,LED Bulb,6,180,,,,cod,delivered,Cumilla
+2026-05-12,Electric Kettle,1,1300,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-11,Power Bank 10000mAh,1,1500,,,,cod,delivered,Chattogram
+2026-05-10,Phone Charger,2,450,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-09,HDMI Cable,1,400,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-05-08,Selfie Stick,1,650,,,,cod,delivered,Chattogram
+2026-05-07,Smart Watch,1,2800,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-05-06,Wired Earphone,3,350,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-05,Bluetooth Speaker,1,1800,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-04,Beard Trimmer,1,1600,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-05-03,Wireless Earbuds,1,2200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-02,Power Bank 10000mAh,1,1500,Sabbir Hossain,sabbir@example.com,no,cod,pending,Khulna
+2026-05-01,Rice Cooker,1,2600,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-04-29,Computer Mouse,2,650,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-04-28,Wireless Earbuds,1,2200,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-04-28,Phone Charger,1,450,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-04-25,USB Cable,4,200,,,,cod,delivered,Dhaka
+2026-04-24,Smart Bulb,2,750,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-04-22,Memory Card 64GB,1,950,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-20,LED Bulb,5,180,,,,cod,delivered,Dhaka
+2026-04-19,Headphone,1,1500,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-04-18,Power Bank 20000mAh,1,2400,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-04-16,Table Fan,1,2100,,,,cod,delivered,Dhaka
+2026-04-15,Phone Charger,3,450,,,,cod,delivered,Dhaka
+2026-04-13,Bluetooth Speaker,1,1800,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-04-12,Power Bank 10000mAh,1,1500,Sabbir Hossain,sabbir@example.com,no,cod,rto,Khulna
+2026-04-10,Electric Iron,1,1250,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-08,Wired Earphone,2,350,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-04-05,Wireless Earbuds,1,2200,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-04-03,Mobile Holder,2,300,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-04-01,LED Bulb,4,180,,,,cod,delivered,Dhaka
+2026-03-29,Smart Watch,1,2800,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-03-28,Extension Cord,1,550,,,,cod,delivered,Cumilla
+2026-03-25,Phone Case,3,350,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-03-22,Power Bank 10000mAh,1,1500,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-20,Webcam,1,1900,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-03-18,USB Cable,3,200,,,,cod,delivered,Dhaka
+2026-03-15,Bluetooth Speaker,1,1800,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-12,Wireless Earbuds,1,2200,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-03-10,Hair Dryer,1,1400,Hasan Mahmud,hasan@example.com,yes,bkash,delivered,Sylhet
+2026-03-08,Electric Kettle,1,1300,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-03-05,LED Bulb,2,180,,,,cod,delivered,Dhaka
+2026-03-02,Phone Charger,2,450,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-02-26,Wireless Earbuds,1,2200,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-02-22,Smart Bulb,2,750,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-02-18,Memory Card 64GB,1,950,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-02-14,Headphone,1,1500,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-02-10,Power Bank 10000mAh,1,1500,Sabbir Hossain,sabbir@example.com,no,bkash,delivered,Khulna
+2026-02-05,Wireless Earbuds,1,2200,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-01-28,Bluetooth Speaker,1,1800,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-01-20,Rice Cooker,1,2600,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-01-15,Wireless Earbuds,1,2200,Sabbir Hossain,sabbir@example.com,no,cod,delivered,Khulna
+2026-01-10,Phone Charger,2,450,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-01-05,Smart Watch,1,2800,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2025-12-28,Power Bank 20000mAh,1,2400,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2025-12-22,LED Bulb,3,180,,,,cod,cancelled,Dhaka
+2025-12-18,Wireless Earbuds,1,2200,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2025-12-12,Bluetooth Speaker,1,1800,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2025-12-05,Power Bank 10000mAh,1,1500,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2025-12-01,Phone Charger,3,450,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka

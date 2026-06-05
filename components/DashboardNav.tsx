@@ -14,6 +14,7 @@ import {
   Mic,
   ShieldAlert,
   UploadCloud,
+  History,
 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 
@@ -39,6 +40,7 @@ const LINKS: Array<{ key: string; href: string; icon: typeof LayoutDashboard }> 
   { key: "nav.customers", href: "/dashboard/customers", icon: Users },
   { key: "nav.voice", href: "/dashboard/voice", icon: Mic },
   { key: "nav.rto", href: "/dashboard/rto", icon: ShieldAlert },
+  { key: "nav.uploads", href: "/dashboard/uploads", icon: History },
   { key: "nav.onboarding", href: "/dashboard/onboarding", icon: UploadCloud },
 ];
 

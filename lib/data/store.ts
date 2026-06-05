@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { generateDataset } from "./seed";
 import { getImported, type Dataset } from "./imported";
 import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
 import type { Customer, Order, Product } from "@/lib/types";
@@ -7,10 +6,12 @@ import type { Customer, Order, Product } from "@/lib/types";
 /**
  * Per-account data store.
  *
- * - The demo account (demo@dokanai.app) always gets a synthetic seeded
- *   dataset so the product stays demoable.
- * - Every other account starts EMPTY and is populated only by importing
- *   real shop data (CSV) via the Khata-to-Cloud page. See lib/data/imported.
+ * Every account starts EMPTY and is populated only by importing real shop
+ * data (CSV / photos / PDF / Live Sync) via the Khata-to-Cloud page. See
+ * lib/data/imported. Pages that read from getStore() must be inside an
+ * authenticated route — without a session, getStore() returns an empty
+ * store and isShopEmpty() returns true, which routes the user to the
+ * onboarding state.
  */
 
 export interface Store {
@@ -25,14 +26,7 @@ export interface Store {
   _cache: Map<string, unknown>;
 }
 
-const DEMO_KEY = "demo@dokanai.app";
 const storeCache = new Map<string, Store>();
-
-function hashKey(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h) || 1;
-}
 
 function makeStore(products: Product[], customers: Customer[], orders: Order[]): Store {
   return {
@@ -47,37 +41,24 @@ function makeStore(products: Product[], customers: Customer[], orders: Order[]):
   };
 }
 
-function syntheticStore(key: string): Store {
-  const { products, customers, orders } = generateDataset(hashKey(key));
-  return makeStore(products, customers, orders);
-}
-
 function emptyStore(): Store {
   return makeStore([], [], []);
 }
 
-/** Resolves the signed-in account's email from the session cookie. */
+/** Resolves the signed-in account's email. Empty string when unauthenticated. */
 function currentEmail(): string {
   const session = verifySessionToken(cookies().get(SESSION_COOKIE)?.value);
-  return session?.email ?? DEMO_KEY;
+  return session?.email ?? "";
 }
 
 /**
  * Returns the data store for the currently signed-in account.
- * Demo account -> synthetic seed. Any other account -> imported data if
- * present, otherwise an empty store.
+ * Imported data if present, otherwise an empty store. Callers should
+ * already be inside an auth-gated route (dashboard layout enforces this).
  */
 export function getStore(): Store {
   const email = currentEmail();
-
-  if (email === DEMO_KEY) {
-    let s = storeCache.get(email);
-    if (!s) {
-      s = syntheticStore(email);
-      storeCache.set(email, s);
-    }
-    return s;
-  }
+  if (!email) return emptyStore();
 
   const imported: Dataset | undefined = getImported(email);
   if (imported) {
@@ -98,12 +79,5 @@ export function getStore(): Store {
 /** True when the signed-in account has no shop data yet. */
 export function isShopEmpty(): boolean {
   const s = getStore();
-  const empty = s.products.length === 0 && s.orders.length === 0;
-  console.log("[store] isShopEmpty", {
-    email: currentEmail(),
-    products: s.products.length,
-    orders: s.orders.length,
-    empty,
-  });
-  return empty;
+  return s.products.length === 0 && s.orders.length === 0;
 }

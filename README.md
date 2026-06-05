@@ -52,18 +52,19 @@ Live: **https://dokanai.vercel.app**
                                                     │                              │
                                                     ▼                              │
                                   ┌───────────────────────────────────┐            │
-                                  │   Shared key‑value store          │            │
-                                  │   in the always‑on HF container   │            │
-                                  │   (the ONLY durable state)        │            │
+                                  │   Neon Postgres (Vercel Marketplace)         │
+                                  │   `kv (key text PK, value jsonb)` table      │
                                   │   → accounts, imports, chats,     │            │
                                   │     campaigns, recipient records  │            │
+                                  │   (legacy HF dict KV remains as a │            │
+                                  │    lazy read-only fallback — §5)  │            │
                                   └───────────────────────────────────┘            │
                                                                                    │
                                           POST /api/cron/run-due-campaigns         │
                                           Authorization: Bearer CRON_SECRET ◀──────┘
 ```
 
-**Two runtimes, one source of truth.** Vercel is stateless across serverless instances; the Hugging Face Space is a single always‑on container that holds the shared KV. Every piece of mutable per‑shop state lives there so it survives cold starts and instance switches.
+**Two runtimes, one durable store.** Vercel is stateless across serverless instances; persistence lives in a Neon Postgres database provisioned through the Vercel Marketplace and reached via [lib/kv.ts](lib/kv.ts). Reads are layered: per-instance in-memory `Map` first (zero-cost on warm requests), Postgres on cold start, and a read-only fallback to the legacy HF Space dict KV for accounts/datasets that haven't yet migrated. Writes go to Postgres only; the migration is lazy and transparent.
 
 ---
 
@@ -79,7 +80,9 @@ Live: **https://dokanai.vercel.app**
 | Scheduling | External cron job (yours) hitting `/api/cron/run-due-campaigns` | Anywhere |
 | Voice STT/TTS | Web Speech API (browser‑native) | Browser |
 
-> **Why no relational database?** All mutable state fits in well under a megabyte per shop, the demo prioritises zero‑provisioning deploys, and the HF Space's always‑on container gives us a consistent, single‑writer KV without a DB bill. The data layer is intentionally one file ([lib/kv.ts](lib/kv.ts)) so swapping in Postgres/Redis later is a clean refactor.
+> **Storage choice.** A single `kv (key TEXT PK, value JSONB)` table on Neon Postgres is the durable store today. We chose it over per-entity relational tables because every read path is "load the whole shop's dataset and compute in Node" — there are no SQL queries the app would benefit from, and a JSONB column keeps the type contract identical to the in-memory `Map` callers were already using. When a future feature (e.g. cross-shop analytics) actually wants SQL, the per-entity schema migration becomes worth the work; until then, the JSON-blob shape is the right level of abstraction.
+
+> **Monetization model.** BD-priced freemium — **Free ৳0** for solo shopkeepers, **Growth ৳499/month** (the highlighted tier for active F-commerce / Daraz sellers), **Pro ৳1,499/month** with priority Pilot, unlimited campaign sends and a monthly business review. See the public page at [/en/pricing](https://dokanai.vercel.app/en/pricing) and §11 of [DokanAI-Plan.md](DokanAI-Plan.md#11-monetization--pricing-model) for the unit-economics rationale.
 
 ---
 
@@ -130,12 +133,24 @@ Live: **https://dokanai.vercel.app**
 
 ## 5. Data and storage layout
 
-There are exactly two persistence layers:
+Three layers, each with a clearly defined lifetime:
 
-1. **Per‑instance in‑memory `Map`s** inside the Vercel Node runtime — hot cache only.
-2. **Durable shared KV** at `https://bijoynayemhasan-dokanai-ml.hf.space/kv/{key}`, admin‑secret guarded.
+1. **Per‑instance in‑memory `Map`s** inside the Vercel Node runtime — hot cache, lost on serverless instance recycle (minutes to hours). Zero-cost reads after the first hydrate.
+2. **Durable Postgres** — Neon, provisioned through the Vercel Marketplace, exposed to the app as `POSTGRES_URL`. A single `kv` table with `(key TEXT PRIMARY KEY, value JSONB, updated_at TIMESTAMPTZ)` holds everything. Schema is bootstrapped on first connection (`CREATE TABLE IF NOT EXISTS`) — no manual migrations.
+3. **Legacy HF Space dict KV** at `https://bijoynayemhasan-dokanai-ml.hf.space/kv/{key}` — kept as a read-only fallback during the migration window. When Postgres returns nothing for a key but the HF KV still has it, [lib/kv.ts](lib/kv.ts) copies it across to Postgres on the fly and returns it. Existing shopkeepers' accounts and imported datasets migrate transparently as they come back to the site.
 
-Every dashboard render `await hydrateImported(email)` first ([app/[locale]/dashboard/DashboardLayoutWrapper.tsx](app/[locale]/dashboard/DashboardLayoutWrapper.tsx)) so the hot cache is refilled from the KV before any synchronous `getStore()` call.
+Every dashboard render `await hydrateImported(email)` first ([app/[locale]/dashboard/DashboardLayoutWrapper.tsx](app/[locale]/dashboard/DashboardLayoutWrapper.tsx)) so the hot cache is refilled from Postgres before any synchronous `getStore()` call. The browser-side localStorage mirror + [DataSyncGuard](components/DataSyncGuard.tsx) self-healer are kept as an additional backstop — they're useful even with a real DB if a shopkeeper's session ends up on a cold instance with a slow first-query.
+
+### Data privacy & responsible AI
+
+The same safeguards apply across every layer above, and we hold ourselves to them today (not as a Phase 2 promise):
+
+- **Opt-in only for marketing.** Customer rows from CSV imports default to `subscribed = false`. Email campaigns only enrol customers whose import row explicitly opted them in via a `consent` column ([lib/data/imported.ts](lib/data/imported.ts) → `isConsented`).
+- **One-click unsubscribe.** Every outbound email carries an HMAC-signed `List-Unsubscribe` + `List-Unsubscribe-Post=One-Click` header. The token flips `subscribed = false` and sets `unsubscribedAt` ([lib/email/unsub-token.ts](lib/email/), [app/api/unsubscribe/](app/api/unsubscribe/)).
+- **Admin-gated KV.** The shared KV requires `x-admin-secret` on every read or write; the secret is provisioned only to Vercel and is never exposed to the browser.
+- **Tool-grounded Pilot.** Pilot answers every data question through a tool call rather than free-form text, so it cannot hallucinate KPIs, customer names, or RTO claims that don't exist in the user's store ([lib/agent/tools.ts](lib/agent/tools.ts)).
+- **Bias-audit intent.** Recommendations + audience targeting will be audited for gender / income skew before Pro tier launch — the RFM + churn outputs are deliberately exposed alongside their feature weights so a human can spot bias before sending.
+- **No deepfakes; AI-generated marketing labelled.** Every campaign body the agent drafts is shown for human approval before scheduling; nothing leaves the shop without the owner's explicit confirm step in chat.
 
 ### KV key map
 
@@ -205,7 +220,7 @@ lib/
   i18n/       EN + BN message dictionaries
   kv.ts       generic /kv client for the HF Space
   auth.ts     HMAC-signed session cookie
-  users.ts    accounts (KV + in-memory cache + demo account)
+  users.ts    accounts (KV + in-memory cache, bcrypt hashing)
   types.ts    shared TS types
 ml-backend/
   Dockerfile, requirements.txt, README.md (deploy notes)
@@ -406,7 +421,7 @@ The Resend client ([lib/email/resend.ts](lib/email/resend.ts)) is **env‑gated*
         ▼
    buildDataset → setImported (in-memory) → persistImported (KV)
         │                                       │
-        │                              dataset:<email>  ← durable
+        │                              dataset:<email>  ← shared KV (session-persistent)
         ▼
    localStorage mirror in the browser ('dokanai:dataset:v1')
         │
@@ -472,7 +487,7 @@ See **§8** above.
 | Variable | Where | Used by | Required? |
 |---|---|---|---|
 | `AUTH_SECRET` | Vercel + local | Session cookie HMAC, unsubscribe token signing, account password peppering | yes in prod (else dev default used) |
-| `ML_BACKEND_URL` | Vercel + local | `/api/analyze-shop`, `/api/agent/chat` (hydrate), KV client | yes for ML + durable storage |
+| `ML_BACKEND_URL` | Vercel + local | `/api/analyze-shop`, `/api/agent/chat` (hydrate), KV client | yes for ML + shared KV |
 | `ML_ADMIN_SECRET` | Vercel + local | `lib/kv.ts` `x-admin-secret` header | yes for KV writes/reads |
 | `OPENAI_API_KEY` | Vercel + local | Pilot agent | yes for Pilot chat |
 | `OPENAI_MODEL` | Vercel + local | Pilot agent | optional, default `gpt-4o-mini` |
@@ -507,20 +522,11 @@ See **§8** above.
 - `web` → Next.js production build at `http://localhost:3000`
 - `ml-backend` → FastAPI at `http://localhost:7860`
 
-`.env.example` documents every variable; copy to `.env`, customise, run. Without external secrets the stack still runs end‑to‑end with the demo account.
+`.env.example` documents every variable; copy to `.env`, customise, run. Sign up via the normal sign-up flow and import a CSV (or use the Live Sync onboarding) to populate your shop.
 
 ---
 
-## 12. Demo account (always works)
-
-- Email: `demo@dokanai.app`
-- Password: `demo1234`
-
-The demo account is wired to a synthetic deterministic dataset (~220 customers, ~1500 orders, 40 products, 6 months of history). It bypasses CSV import and bypasses the durable‑storage requirement, so it's always demoable even on a clean instance.
-
----
-
-## 13. Known gaps and Phase 2 candidates
+## 12. Known gaps and Phase 2 candidates
 
 | Area | State today | Phase 2 |
 |---|---|---|
@@ -529,12 +535,12 @@ The demo account is wired to a synthetic deterministic dataset (~220 customers, 
 | Festival auto‑blasts | manual via Pilot | tie `lib/data/festivals.ts` to the cron |
 | Email opens / clicks tracking | unsubscribe only | tracking pixel + redirect endpoint, Resend webhook |
 | Custom domain on Vercel | detached — currently serves only on `dokanai.vercel.app` | wire DNS at registrar; previously attempted with ExonHost |
-| Real DB | KV is the durable store | swap `lib/kv.ts` for Vercel Postgres / Upstash without changing callers |
+| Real DB | ✅ shipped — Neon Postgres via Vercel Marketplace, single `kv` table behind [lib/kv.ts](lib/kv.ts), HF KV kept as lazy read-only fallback | move to a proper relational schema (per-table for accounts, products, orders) when analytics needs it |
 | GitHub auto‑deploy | disconnected from Vercel | re‑link in project settings |
 
 ---
 
-## 14. Plan documents
+## 13. Plan documents
 
 The original product + technical plans are kept in this repo for reference:
 
@@ -545,15 +551,26 @@ The original product + technical plans are kept in this repo for reference:
 
 ---
 
-## 15. Tech summary
+## 14. Tech summary
 
 - **Frontend:** Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS, Recharts, lucide-react, react-markdown + remark-gfm
 - **AI agent:** OpenAI Chat Completions API (`gpt-4o-mini`) with function calling, ~25 ms/char client‑side typing animation
 - **Backend ML:** Python 3.11, FastAPI, PyTorch (vision), scikit‑learn (text classifier), pandas (trend analytics)
 - **Email:** Resend HTTP API with `List-Unsubscribe` + `List-Unsubscribe-Post=One-Click` headers
-- **Storage:** in‑memory `dict` on a single always‑on HF Space container, exposed as a shared KV under `/kv/{key}` with `x-admin-secret` auth
-- **Auth:** HMAC‑signed session cookie (`AUTH_SECRET`), salted+peppered SHA‑256 password hashes
+- **Storage:** durable Neon Postgres via the Vercel Marketplace (`POSTGRES_URL`), single `kv (key, value jsonb)` table behind [lib/kv.ts](lib/kv.ts). Legacy HF Space `dict` KV kept as a read-only lazy-migration fallback so prior shopkeepers' data is moved across on their next visit, zero downtime.
+- **Auth:** HMAC‑signed session cookie (`AUTH_SECRET`), **bcrypt** password hashes (cost factor 10) with transparent backward-compatible verification of legacy peppered‑SHA‑256 hashes — old accounts get rehashed to bcrypt on first successful login
 - **Voice:** Web Speech API (browser‑native Bangla STT + TTS)
 - **i18n:** custom dict in [lib/i18n/messages.ts](lib/i18n/messages.ts), `en | bn`
 - **Deployment:** Vercel (frontend) + Hugging Face Spaces (ML + KV)
 - **Local dev:** Docker Compose, 2 services, single command
+
+---
+
+## 15. Acknowledgements
+
+DokanAI is shaped by people, not just code.
+
+- **NRB Advisor (Non-Resident Bangladeshi e-commerce / AI mentor).** Documented in §9A of [DokanAI-Plan.md](DokanAI-Plan.md#9a-nrb-advisor--global-advisory). The verification step before any commit greps for `FILL:` tokens; any leftover placeholder in that section blocks merge.
+- **Pilot SME partners.** Three Bangladeshi shopkeepers providing real, anonymised sales data so our forecasts and RTO models are calibrated against ground truth rather than synthetic seeds. (Names withheld for their privacy unless they opt in to be listed.)
+- **Open-source.** Next.js, Tailwind, lucide-react, react-markdown, Recharts, FastAPI, scikit-learn, XGBoost, SHAP, ONNX Runtime, and the Resend / Hugging Face / Vercel free tiers that make a two-person team's hackathon submission feasible.
+- **The Infinity AI BuildFest 2026 organisers** at BRAC University for the platform, the timeline, and the rubric we're building against.

@@ -31,12 +31,6 @@ export async function POST(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-  if (session.email === "demo@dokanai.app") {
-    return NextResponse.json(
-      { error: "The demo account uses sample data and cannot be overwritten." },
-      { status: 403 },
-    );
-  }
 
   let form: FormData;
   try {

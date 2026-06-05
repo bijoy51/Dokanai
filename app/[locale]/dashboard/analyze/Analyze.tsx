@@ -6,12 +6,17 @@ import {
   ArrowDown,
   ArrowUp,
   BarChart3,
+  BookmarkCheck,
   CalendarDays,
   Check,
+  Clock,
   FileSpreadsheet,
   Image as ImageIcon,
+  Loader2,
   PackageSearch,
+  RotateCcw,
   Sparkles,
+  Trash2,
   TrendingUp,
   Upload,
   X,
@@ -28,9 +33,22 @@ import type {
 const MAX_PHOTOS = 5;
 const MAX_PHOTO_BYTES = 1_000_000;
 
-// The last analysis is cached here so a page reload keeps the results
-// instead of resetting to the empty upload form. Cleared on logout.
+// Tab-local cache for TEMPORARY (uploaded-data) analyses, so a page reload
+// doesn't wipe whatever the user just generated from a CSV. The PERMANENT
+// (account-data) analyses live in the KV via /api/analyze-shop/saved and
+// are loaded on mount independently of this key.
 const STORAGE_KEY = "dokanai:analyze:v1";
+
+/** Tags the displayed analysis as either a one-off run on uploaded files
+ *  ("temporary") or the persisted view of the signed-in shop ("saved"). */
+type AnalysisSource = "saved" | "temporary";
+
+interface SavedAnalysisDto {
+  result: AnalyzeShopResponse;
+  shopName?: string;
+  region?: string;
+  savedAt: number;
+}
 
 interface ParsedListing {
   title: string;
@@ -112,27 +130,62 @@ export default function Analyze({ params }: { params: { locale: string } }) {
   const [error, setError] = useState("");
   const [result, setResult] = useState<AnalyzeShopResponse | null>(null);
 
+  // Source-tagging state: which kind of analysis is currently on screen and,
+  // separately, the most recent KV-saved analysis (so a temporary upload run
+  // doesn't lose the user's persisted view — they can restore it).
+  const [source, setSource] = useState<AnalysisSource | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<SavedAnalysisDto | null>(null);
+  const [savingPermanent, setSavingPermanent] = useState(false);
+  const [clearingSaved, setClearingSaved] = useState(false);
+
   const listingsInput = useRef<HTMLInputElement>(null);
   const salesInput = useRef<HTMLInputElement>(null);
   const photosInput = useRef<HTMLInputElement>(null);
 
-  // Restore the previous analysis (and shop fields) on mount so reloading
-  // the page does not throw away the results the user just generated.
+  // Mount: try the KV-saved analysis first (the permanent view). If nothing
+  // is saved, fall back to whatever the user generated in this tab earlier.
   useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw) as {
-        result?: AnalyzeShopResponse;
-        shopName?: string;
-        region?: string;
-      };
-      if (saved.result) setResult(saved.result);
-      if (typeof saved.shopName === "string") setShopName(saved.shopName);
-      if (typeof saved.region === "string" && saved.region) setRegion(saved.region);
-    } catch {
-      /* ignore corrupt / unavailable storage */
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/analyze-shop/saved", { cache: "no-store" });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = (await res.json()) as { saved: SavedAnalysisDto | null };
+          if (data.saved) {
+            setSavedSnapshot(data.saved);
+            setResult(data.saved.result);
+            setSource("saved");
+            if (data.saved.shopName) setShopName(data.saved.shopName);
+            if (data.saved.region) setRegion(data.saved.region);
+            return;
+          }
+        }
+      } catch {
+        /* network down / 401 — fall through to sessionStorage */
+      }
+      try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const tmp = JSON.parse(raw) as {
+          result?: AnalyzeShopResponse;
+          shopName?: string;
+          region?: string;
+        };
+        if (cancelled) return;
+        if (tmp.result) {
+          setResult(tmp.result);
+          setSource("temporary");
+        }
+        if (typeof tmp.shopName === "string") setShopName(tmp.shopName);
+        if (typeof tmp.region === "string" && tmp.region) setRegion(tmp.region);
+      } catch {
+        /* ignore corrupt / unavailable storage */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const onPickPhotos = (files: FileList | null) => {
@@ -196,20 +249,89 @@ export default function Analyze({ params }: { params: { locale: string } }) {
         setError(data.error || t("analyze.error", locale));
         return;
       }
-      setResult(data as AnalyzeShopResponse);
-      // Persist so a reload keeps the results.
-      try {
-        sessionStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify({ result: data, shopName, region }),
-        );
-      } catch {
-        /* storage full or disabled — non-fatal */
+      const analysis = data as AnalyzeShopResponse;
+      setResult(analysis);
+
+      if (useAccountData) {
+        // PERMANENT path: write through to the KV via /api/analyze-shop/saved
+        // so the result survives refreshes, devices, and serverless cold
+        // starts. The temporary sessionStorage cache is intentionally
+        // cleared here so a stale upload analysis can't shadow the saved
+        // one on the next visit.
+        setSource("saved");
+        setSavingPermanent(true);
+        try {
+          sessionStorage.removeItem(STORAGE_KEY);
+        } catch {
+          /* non-fatal */
+        }
+        try {
+          const saveRes = await fetch("/api/analyze-shop/saved", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ result: analysis, shopName, region }),
+          });
+          if (saveRes.ok) {
+            const saveData = (await saveRes.json()) as { saved: SavedAnalysisDto };
+            setSavedSnapshot(saveData.saved);
+          }
+        } catch {
+          /* network blip — UI keeps the result, just without a saved badge */
+        } finally {
+          setSavingPermanent(false);
+        }
+      } else {
+        // TEMPORARY path: tab-local sessionStorage only. The KV-saved
+        // snapshot, if any, stays untouched so the user can restore it.
+        setSource("temporary");
+        try {
+          sessionStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ result: analysis, shopName, region }),
+          );
+        } catch {
+          /* storage full or disabled — non-fatal */
+        }
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("analyze.error", locale));
     } finally {
       setLoading(false);
+    }
+  };
+
+  /** Restore the persisted analysis after the user has been viewing a
+   *  temporary upload result. No network — uses the in-memory snapshot. */
+  const restoreSaved = () => {
+    if (!savedSnapshot) return;
+    setResult(savedSnapshot.result);
+    setSource("saved");
+    if (savedSnapshot.shopName) setShopName(savedSnapshot.shopName);
+    if (savedSnapshot.region) setRegion(savedSnapshot.region);
+    setError("");
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  /** Delete the KV-saved snapshot. If the currently-displayed analysis IS
+   *  the saved one, clear the screen too. */
+  const clearSaved = async () => {
+    setClearingSaved(true);
+    try {
+      await fetch("/api/analyze-shop/saved", { method: "DELETE" });
+      const wasShowingSaved = source === "saved";
+      setSavedSnapshot(null);
+      if (wasShowingSaved) {
+        setResult(null);
+        setSource(null);
+      }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setClearingSaved(false);
     }
   };
 
@@ -257,7 +379,110 @@ export default function Analyze({ params }: { params: { locale: string } }) {
         </div>
       )}
 
+      {result && (
+        <AnalysisSourceBanner
+          locale={locale}
+          source={source}
+          savedSnapshot={savedSnapshot}
+          savingPermanent={savingPermanent}
+          clearingSaved={clearingSaved}
+          onRestore={restoreSaved}
+          onClear={clearSaved}
+        />
+      )}
+
       {result && <Results locale={locale} result={result} />}
+    </div>
+  );
+}
+
+// ---------- source banner (Saved vs Temporary) ----------
+
+function formatAgo(ts: number, locale: Locale): string {
+  const diff = Math.max(0, Date.now() - ts);
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return t("analyze.justNow", locale);
+  if (min < 60) return `${min} ${t("analyze.minAgo", locale)}`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} ${t("analyze.hrAgo", locale)}`;
+  const day = Math.floor(hr / 24);
+  return `${day} ${t("analyze.dayAgo", locale)}`;
+}
+
+function AnalysisSourceBanner({
+  locale,
+  source,
+  savedSnapshot,
+  savingPermanent,
+  clearingSaved,
+  onRestore,
+  onClear,
+}: {
+  locale: Locale;
+  source: AnalysisSource | null;
+  savedSnapshot: SavedAnalysisDto | null;
+  savingPermanent: boolean;
+  clearingSaved: boolean;
+  onRestore: () => void;
+  onClear: () => void;
+}) {
+  if (!source) return null;
+
+  if (source === "saved") {
+    return (
+      <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-start gap-2 text-sm text-emerald-900 min-w-0">
+          {savingPermanent ? (
+            <Loader2 className="w-4 h-4 mt-0.5 shrink-0 animate-spin" />
+          ) : (
+            <BookmarkCheck className="w-4 h-4 mt-0.5 shrink-0 text-emerald-700" />
+          )}
+          <div className="min-w-0">
+            <div className="font-medium">
+              {savingPermanent ? t("analyze.savingPermanent", locale) : t("analyze.savedTitle", locale)}
+            </div>
+            {savedSnapshot && (
+              <div className="text-[11px] text-emerald-800/80 mt-0.5">
+                {t("analyze.savedAt", locale)} {formatAgo(savedSnapshot.savedAt, locale)}
+              </div>
+            )}
+          </div>
+        </div>
+        {savedSnapshot && !savingPermanent && (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={clearingSaved}
+            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
+          >
+            {clearingSaved ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+            {t("analyze.clearSaved", locale)}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // temporary
+  return (
+    <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-start gap-2 text-sm text-amber-900 min-w-0">
+        <Clock className="w-4 h-4 mt-0.5 shrink-0 text-amber-700" />
+        <div className="min-w-0">
+          <div className="font-medium">{t("analyze.tempTitle", locale)}</div>
+          <div className="text-[11px] text-amber-800/80 mt-0.5">{t("analyze.tempBody", locale)}</div>
+        </div>
+      </div>
+      {savedSnapshot && (
+        <button
+          type="button"
+          onClick={onRestore}
+          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-md border border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+        >
+          <RotateCcw className="w-3 h-3" />
+          {t("analyze.restoreSaved", locale)}
+        </button>
+      )}
     </div>
   );
 }
@@ -382,6 +607,10 @@ function UploadPanel(props: {
         <BarChart3 className="w-4 h-4" />
         {props.loading ? t("common.loading", locale) : t("analyze.analyzeUploaded", locale)}
       </button>
+      <div className="mt-2 inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+        <Clock className="w-3 h-3" />
+        {t("analyze.uploadIsTemporary", locale)}
+      </div>
     </div>
   );
 }
@@ -460,6 +689,10 @@ function AccountAnalyzePanel({
         <li>· {t("analyze.bullet2", locale)}</li>
         <li>· {t("analyze.bullet3", locale)}</li>
       </ul>
+      <div className="mt-3 inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+        <BookmarkCheck className="w-3 h-3" />
+        {t("analyze.accountSavesPermanent", locale)}
+      </div>
     </div>
   );
 }

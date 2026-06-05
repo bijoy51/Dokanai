@@ -72,7 +72,13 @@ export function NoDataState({ locale }: { locale: Locale }) {
         const postRes = await fetch("/api/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ products: mirror!.products ?? [], sales: mirror!.sales ?? [] }),
+          // silent: true so this self-healing re-import doesn't show up in
+          // the Uploads history as if the user uploaded again.
+          body: JSON.stringify({
+            products: mirror!.products ?? [],
+            sales: mirror!.sales ?? [],
+            silent: true,
+          }),
         });
         if (!postRes.ok) {
           setPhase("empty");

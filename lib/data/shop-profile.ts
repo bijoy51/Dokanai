@@ -37,17 +37,19 @@ export type VenueType =
   | "residential"
   | "mixed";
 
+/**
+ * The shopkeeper's saved profile is location-only. Shop *type* is detected
+ * automatically from their imported catalog (see detectShopType in
+ * lib/ai/location-demand.ts) so we never ask them to self-classify — the
+ * data they upload already tells us.
+ */
 export interface ShopProfile {
-  shopType: ShopType;
   city: string;
   area: string;
   venueType: VenueType;
   updatedAt: number;
 }
 
-const VALID_SHOP_TYPES: ShopType[] = [
-  "grocery", "clothing", "electronics", "beauty", "food", "home", "pharmacy", "stationery", "mixed",
-];
 const VALID_VENUES: VenueType[] = [
   "near_school", "near_university", "near_office", "near_hospital", "near_market",
   "near_religious", "tourist_area", "residential", "mixed",
@@ -56,17 +58,13 @@ const VALID_VENUES: VenueType[] = [
 export function sanitizeProfile(raw: unknown): ShopProfile | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
-  const shopType = typeof r.shopType === "string" && (VALID_SHOP_TYPES as string[]).includes(r.shopType)
-    ? (r.shopType as ShopType)
-    : null;
   const venueType = typeof r.venueType === "string" && (VALID_VENUES as string[]).includes(r.venueType)
     ? (r.venueType as VenueType)
     : null;
-  if (!shopType || !venueType) return null;
+  if (!venueType) return null;
   const city = typeof r.city === "string" ? r.city.trim().slice(0, 80) : "";
   const area = typeof r.area === "string" ? r.area.trim().slice(0, 120) : "";
   return {
-    shopType,
     venueType,
     city,
     area,

@@ -20,8 +20,6 @@ import {
  * (so a stolen GET response or leaked HAR file can't lift it).
  */
 
-const DEMO = "demo@dokanai.app";
-
 function baseUrlOf(req: Request): string {
   // Prefer the Host header (works on Vercel, includes the custom domain
   // if any), fall back to the request URL's origin.
@@ -41,12 +39,6 @@ export async function GET() {
 export async function POST(req: Request) {
   const session = getSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  if (session.email === DEMO) {
-    return NextResponse.json(
-      { error: "The demo account uses sample data and cannot have a live sync." },
-      { status: 403 },
-    );
-  }
   const creds = await createOrRotate(session.email, baseUrlOf(req));
   return NextResponse.json(creds);
 }

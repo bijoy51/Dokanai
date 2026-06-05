@@ -1,27 +1,38 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import {
-  buildDataset,
+  getImported,
   hasImported,
   hydrateImported,
+  mergeDataset,
   persistImported,
   removeImported,
   setImported,
   type RawProduct,
   type RawSale,
 } from "@/lib/data/imported";
+import { hydrateUploadHistory, recordUpload, type UploadSource } from "@/lib/data/upload-history";
 
 /**
  * /api/import
  *
  * GET    -> { hasData, email }              status for the signed-in account
- * POST   -> { products: [...], sales: [...] }  store an imported dataset
+ * POST   -> { products: [...], sales: [...], source?: "csv"|"pdf"|"photos" }
+ *           Appends to the existing dataset. Re-uploads of the same rows
+ *           are de-duplicated (orders by content hash, products by name,
+ *           customers by name). Previous data is NEVER replaced or lost.
  * DELETE -> clears the signed-in account's imported data
- *
- * The demo account is read-only here: it always shows the synthetic seed.
  */
 
-const DEMO = "demo@dokanai.app";
+const VALID_SOURCES: UploadSource[] = ["csv", "pdf", "photos", "live-sync"];
+
+function sanitizeSource(raw: unknown): UploadSource {
+  if (typeof raw === "string") {
+    const lower = raw.toLowerCase();
+    if ((VALID_SOURCES as string[]).includes(lower)) return lower as UploadSource;
+  }
+  return "csv";
+}
 
 export async function GET() {
   const session = getSession();
@@ -30,11 +41,10 @@ export async function GET() {
   }
   // Pull the dataset from the durable KV into this instance's cache so the
   // status reflects data imported on any instance, not just this one.
-  if (session.email !== DEMO) await hydrateImported(session.email);
+  await hydrateImported(session.email);
   return NextResponse.json({
     email: session.email,
-    hasData: session.email === DEMO || hasImported(session.email),
-    isDemo: session.email === DEMO,
+    hasData: hasImported(session.email),
   });
 }
 
@@ -46,15 +56,8 @@ export async function POST(req: Request) {
     console.warn(`${LOG} no session -> 401`);
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-  if (session.email === DEMO) {
-    console.warn(`${LOG} demo account -> 403`);
-    return NextResponse.json(
-      { error: "The demo account uses sample data and cannot be overwritten." },
-      { status: 403 },
-    );
-  }
 
-  let body: { products?: RawProduct[]; sales?: RawSale[] };
+  let body: { products?: RawProduct[]; sales?: RawSale[]; source?: string; note?: string; silent?: boolean };
   try {
     body = await req.json();
   } catch (e) {
@@ -64,7 +67,9 @@ export async function POST(req: Request) {
 
   const products = Array.isArray(body.products) ? body.products : [];
   const sales = Array.isArray(body.sales) ? body.sales : [];
-  console.log(`${LOG} received`, { products: products.length, sales: sales.length });
+  const source = sanitizeSource(body.source);
+  const note = typeof body.note === "string" ? body.note.slice(0, 280) : undefined;
+  console.log(`${LOG} received`, { products: products.length, sales: sales.length, source });
   if (products.length === 0 && sales.length === 0) {
     console.warn(`${LOG} empty payload -> 400`);
     return NextResponse.json(
@@ -73,31 +78,54 @@ export async function POST(req: Request) {
     );
   }
 
-  const dataset = buildDataset(products, sales);
-  console.log(`${LOG} buildDataset ->`, {
+  // Hydrate so we merge against the latest persisted dataset, not whatever
+  // happens to be in this instance's RAM.
+  await hydrateImported(session.email);
+  await hydrateUploadHistory(session.email);
+
+  const existing = getImported(session.email);
+  const { dataset, delta } = mergeDataset(existing, products, sales);
+  console.log(`${LOG} mergeDataset ->`, {
     products: dataset.products.length,
     customers: dataset.customers.length,
     orders: dataset.orders.length,
+    delta,
   });
   if (dataset.products.length === 0) {
-    console.warn(`${LOG} 0 products after build -> 400`);
+    console.warn(`${LOG} 0 products after merge -> 400`);
     return NextResponse.json(
       { error: "No usable products found in the uploaded files." },
       { status: 400 },
     );
   }
+
   setImported(session.email, dataset);
-  // Persist durably so a render on a different / cold instance can find it.
   const persisted = await persistImported(session.email, dataset);
-  console.log(`${LOG} kvConfigured persist result =`, persisted, "(false = ML_ADMIN_SECRET not set, in-memory only)");
+  console.log(`${LOG} persisted =`, persisted);
+
+  const totals = {
+    products: dataset.products.length,
+    customers: dataset.customers.length,
+    orders: dataset.orders.length,
+  };
+
+  // Record the upload event so the /dashboard/uploads page can show it.
+  // `silent: true` is set by the self-healing rehydration paths (DataSyncGuard
+  // / NoDataState) so they don't pollute the history with noise events.
+  if (!body.silent) {
+    await recordUpload(session.email, {
+      source,
+      status: "ok",
+      delta,
+      totals,
+      note,
+    });
+  }
 
   return NextResponse.json({
     ok: true,
-    counts: {
-      products: dataset.products.length,
-      customers: dataset.customers.length,
-      orders: dataset.orders.length,
-    },
+    counts: totals,
+    delta,
   });
 }
 
@@ -106,6 +134,6 @@ export async function DELETE() {
   if (!session) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
-  if (session.email !== DEMO) await removeImported(session.email);
+  await removeImported(session.email);
   return NextResponse.json({ ok: true });
 }

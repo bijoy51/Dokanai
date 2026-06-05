@@ -1,0 +1,102 @@
+date,product,qty,unit_price,customer,email,consent,payment,status,city
+2026-06-03,Rice 5kg (Miniket),2,420,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-06-03,Mustard Oil 1L,1,280,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-06-03,Onion 1kg,3,70,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-06-02,Soybean Oil 5L,1,850,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-06-02,Atta 2kg,2,140,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-06-02,Sugar 1kg,2,135,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-06-01,Lentil (Masoor Dal) 1kg,2,135,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-06-01,Chickpea (Chola) 1kg,1,140,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-31,Chickpea (Chola) 1kg,2,140,,,,cod,delivered,Chattogram
+2026-05-31,Salt 1kg,2,40,,,,cod,delivered,Chattogram
+2026-05-30,Tea Pack 500g,1,380,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-30,Biscuit Pack,3,90,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-29,Ghee 500g,1,650,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-05-29,Semai 200g,4,60,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-05-28,Rice 5kg (Miniket),1,420,Ripon Mia,ripon@example.com,yes,cod,delivered,Barishal
+2026-05-28,Potato 2kg,2,80,Ripon Mia,ripon@example.com,yes,cod,delivered,Barishal
+2026-05-27,Powder Milk 500g,1,420,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-27,Sugar 1kg,2,135,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-26,Instant Noodles 8pk,2,180,Farhan Ahmed,farhan@example.com,yes,nagad,delivered,Dhaka
+2026-05-26,Biscuit Pack,2,90,Farhan Ahmed,farhan@example.com,yes,nagad,delivered,Dhaka
+2026-05-25,Mustard Oil 1L,1,280,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-05-25,Turmeric Powder 200g,1,90,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-05-24,Chili Powder 200g,1,110,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-05-23,Soybean Oil 5L,1,850,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-05-23,Rice 5kg (Miniket),1,420,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-05-22,Spice Mix Pack,2,280,,,,cod,delivered,Dhaka
+2026-05-22,Cumin Powder 100g,1,130,,,,cod,delivered,Dhaka
+2026-05-21,Onion 1kg,5,70,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-05-21,Garlic 500g,2,90,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-05-20,Tea Pack 500g,1,380,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-19,Atta 2kg,3,140,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-05-19,Suji 500g,2,75,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-05-18,Coffee Jar 100g,1,480,Sabbir Hossain,sabbir@example.com,no,bkash,delivered,Khulna
+2026-05-17,Salt 1kg,3,40,,,,cod,delivered,Dhaka
+2026-05-17,Sugar 1kg,2,135,,,,cod,delivered,Dhaka
+2026-05-16,Honey 500g,1,550,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-05-15,Dates 1kg,1,480,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-05-14,Rice 5kg (Miniket),2,420,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-14,Mug Dal 1kg,1,160,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-13,Flattened Rice 1kg,2,110,,,,cod,delivered,Cumilla
+2026-05-13,Puffed Rice 1kg,2,120,,,,cod,delivered,Cumilla
+2026-05-12,Powder Milk 500g,1,420,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-05-11,Chickpea (Chola) 1kg,3,140,,,,cod,delivered,Chattogram
+2026-05-10,Mustard Oil 1L,2,280,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-05-09,Detergent Powder 1kg,1,210,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-05-09,Soap Bar 4pk,2,200,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-05-08,Coconut Oil 250ml,1,220,,,,cod,delivered,Chattogram
+2026-05-07,Tea Pack 500g,1,380,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-05-06,Biscuit Pack,4,90,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-05-05,Soybean Oil 5L,1,850,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-05-04,Ghee 500g,1,650,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-05-03,Rice 5kg (Miniket),1,420,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-05-02,Onion 1kg,4,70,,,,cod,delivered,Khulna
+2026-05-01,Lentil (Masoor Dal) 1kg,2,135,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-04-29,Black Tea 250g,1,210,Tahmina Akter,tahmina@example.com,yes,bkash,delivered,Gazipur
+2026-04-28,Instant Noodles 8pk,3,180,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-04-27,Sugar 1kg,3,135,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-04-25,Spice Mix Pack,2,280,,,,cod,delivered,Dhaka
+2026-04-24,Powder Milk 500g,1,420,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-04-22,Atta 2kg,2,140,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-20,Salt 1kg,4,40,,,,cod,delivered,Dhaka
+2026-04-19,Garlic 500g,2,90,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-04-18,Mustard Oil 1L,1,280,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-04-16,Rice 5kg (Miniket),2,420,,,,cod,delivered,Dhaka
+2026-04-15,Chickpea (Chola) 1kg,3,140,,,,cod,delivered,Dhaka
+2026-04-13,Tea Pack 500g,1,380,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-04-12,Coffee Jar 100g,1,480,Sabbir Hossain,sabbir@example.com,no,cod,rto,Khulna
+2026-04-10,Ghee 500g,1,650,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-04-08,Biscuit Pack,3,90,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2026-04-05,Soybean Oil 5L,1,850,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-04-03,Honey 500g,1,550,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-04-01,Onion 1kg,3,70,,,,cod,delivered,Dhaka
+2026-03-29,Sugar 1kg,2,135,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-03-28,Detergent Powder 1kg,2,210,,,,cod,delivered,Cumilla
+2026-03-25,Rice 5kg (Miniket),2,420,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-03-22,Dates 1kg,2,480,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-20,Semai 200g,6,60,Mehedi Hasan,mehedi@example.com,yes,nagad,delivered,Mymensingh
+2026-03-18,Spice Mix Pack,2,280,,,,cod,delivered,Dhaka
+2026-03-15,Powder Milk 500g,2,420,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-03-12,Mustard Oil 1L,1,280,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-03-10,Soybean Oil 5L,1,850,Hasan Mahmud,hasan@example.com,yes,bkash,delivered,Sylhet
+2026-03-08,Tea Pack 500g,1,380,Sumaiya Akhter,sumaiya@example.com,yes,bkash,delivered,Dhaka
+2026-03-05,Salt 1kg,3,40,,,,cod,delivered,Dhaka
+2026-03-02,Rice 5kg (Miniket),1,420,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-02-26,Dates 1kg,3,480,Ruma Sultana,ruma@example.com,yes,cod,delivered,Chattogram
+2026-02-22,Powder Milk 500g,1,420,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2026-02-18,Atta 2kg,2,140,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2026-02-14,Ghee 500g,1,650,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2026-02-10,Coffee Jar 100g,1,480,Sabbir Hossain,sabbir@example.com,no,bkash,delivered,Khulna
+2026-02-05,Instant Noodles 8pk,2,180,Tanvir Islam,tanvir@example.com,no,bkash,delivered,Dhaka
+2026-01-28,Rice 5kg (Miniket),2,420,Tahsin Khan,tahsin@example.com,yes,bkash,delivered,Dhaka
+2026-01-20,Soybean Oil 5L,1,850,Hasan Mahmud,hasan@example.com,yes,cod,delivered,Sylhet
+2026-01-15,Tea Pack 500g,1,380,Mukti Akter,mukti@example.com,yes,bkash,delivered,Rajshahi
+2026-01-10,Sugar 1kg,2,135,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka
+2026-01-05,Onion 1kg,4,70,,,,cod,delivered,Dhaka
+2025-12-28,Semai 200g,8,60,Shahnaz Begum,shahnaz@example.com,yes,bkash,delivered,Dhaka
+2025-12-22,Biscuit Pack,2,90,,,,cod,cancelled,Dhaka
+2025-12-18,Rice 5kg (Miniket),1,420,Nafisa Rahman,nafisa@example.com,yes,bkash,delivered,Dhaka
+2025-12-12,Powder Milk 500g,1,420,Anika Ferdous,anika@example.com,yes,bkash,delivered,Dhaka
+2025-12-05,Mustard Oil 1L,2,280,Karim Hossain,karim@example.com,yes,bkash,delivered,Chattogram
+2025-12-01,Sugar 1kg,3,135,Rashida Begum,rashida@example.com,yes,bkash,delivered,Dhaka

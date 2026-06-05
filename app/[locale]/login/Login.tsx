@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { t, type Locale } from "@/lib/i18n/messages";
-import { LogIn } from "lucide-react";
+import { LogIn, AlertCircle } from "lucide-react";
 
 export default function Login({
   params,
@@ -33,7 +33,20 @@ export default function Login({
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || t("auth.genericError", locale));
+        // The server distinguishes between "no account" (404-ish) and
+        // "wrong password" (401-ish) via the message text — translate to
+        // localized variants so the user sees a clear Bangla/English
+        // explanation instead of the raw English from the API.
+        const raw = (data?.error as string | undefined) ?? "";
+        if (/no account/i.test(raw)) {
+          setError(t("auth.errNoAccount", locale));
+        } else if (/incorrect password/i.test(raw)) {
+          setError(t("auth.errIncorrectPassword", locale));
+        } else if (/required/i.test(raw)) {
+          setError(t("auth.errEmailPasswordRequired", locale));
+        } else {
+          setError(raw || t("auth.genericError", locale));
+        }
         return;
       }
       router.push(next);
@@ -80,8 +93,12 @@ export default function Login({
               />
             </div>
             {error && (
-              <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2">
-                {error}
+              <div
+                role="alert"
+                className="text-sm text-rose-800 bg-rose-50 border border-rose-300 rounded-md px-3 py-2.5 flex items-start gap-2"
+              >
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
+                <span className="leading-snug">{error}</span>
               </div>
             )}
             <button
@@ -93,10 +110,6 @@ export default function Login({
               {loading ? t("common.loading", locale) : t("auth.loginCta", locale)}
             </button>
           </form>
-
-          <div className="mt-4 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-md px-3 py-2">
-            {t("auth.demoHint", locale)} <span className="font-mono">demo@dokanai.app / demo1234</span>
-          </div>
 
           <p className="mt-4 text-sm text-slate-600 text-center">
             {t("auth.noAccount", locale)}{" "}
