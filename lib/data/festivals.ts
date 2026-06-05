@@ -1,6 +1,10 @@
 import type { Festival } from "@/lib/types";
 
-// Bangladesh festival calendar 2026 (key dates).
+// Bangladesh festival calendar — 2026 plus rolling 2027 entries so the
+// "Upcoming festivals" panel stays evergreen as the year rolls. Lunar
+// festival dates (Eid, Ramadan, Durga Puja) are approximations based on
+// expected lunar shift (~11 days earlier each year for Islamic festivals);
+// verify and adjust annually as official dates are announced.
 // Used by the Festival Intelligence engine to pre-alert SMEs.
 export const FESTIVALS: Festival[] = [
   {
@@ -80,6 +84,110 @@ export const FESTIVALS: Festival[] = [
     advice: "Gift bundles, perfumes, jewellery, flowers move fast in urban markets.",
     adviceBn: "গিফট বান্ডেল, পারফিউম, গহনা, ফুলের বিক্রি শহরাঞ্চলে বাড়ে।",
   },
+  {
+    id: "victory-day-2026",
+    name: "Victory Day",
+    nameBn: "বিজয় দিবস",
+    date: "2026-12-16",
+    leadDays: 7,
+    peakBoost: 1.5,
+    categories: ["clothing", "home"],
+    advice: "Red-and-green themed clothing, flags, festive home items see a lift.",
+    adviceBn: "লাল-সবুজ পোশাক, পতাকা, উৎসবের হোম আইটেম বিক্রি বাড়ে।",
+  },
+
+  // ---------- 2027 entries ----------
+  // Lunar dates are approximations — verify against the official BD calendar
+  // once announced. Solar dates (Pohela Boishakh, Valentine's, Victory Day)
+  // are fixed.
+  {
+    id: "valentines-2027",
+    name: "Valentine's Day",
+    nameBn: "ভ্যালেন্টাইনস ডে",
+    date: "2027-02-14",
+    leadDays: 7,
+    peakBoost: 1.8,
+    categories: ["beauty", "clothing"],
+    advice: "Gift bundles, perfumes, jewellery, flowers move fast in urban markets.",
+    adviceBn: "গিফট বান্ডেল, পারফিউম, গহনা, ফুলের বিক্রি শহরাঞ্চলে বাড়ে।",
+  },
+  {
+    id: "ramadan-start-2027",
+    name: "Ramadan begins",
+    nameBn: "রমজান শুরু",
+    date: "2027-02-08",
+    leadDays: 14,
+    peakBoost: 2.4,
+    categories: ["food", "clothing"],
+    advice: "Stock up on dates, perfumes, prayer items, iftar essentials.",
+    adviceBn: "খেজুর, পারফিউম, ইফতারের সামগ্রী মজুত বাড়ান।",
+  },
+  {
+    id: "eid-ul-fitr-2027",
+    name: "Eid-ul-Fitr",
+    nameBn: "ঈদ-উল-ফিতর",
+    date: "2027-03-10",
+    leadDays: 21,
+    peakBoost: 3.2,
+    categories: ["clothing", "beauty", "food"],
+    advice: "Eid is the year's biggest sales window. Stock new collections, fragrances, sweets.",
+    adviceBn: "বছরের সবচেয়ে বড় বিক্রির সময়। নতুন কালেকশন, পারফিউম, মিষ্টি মজুত রাখুন।",
+  },
+  {
+    id: "pohela-boishakh-2027",
+    name: "Pohela Boishakh",
+    nameBn: "পহেলা বৈশাখ",
+    date: "2027-04-14",
+    leadDays: 10,
+    peakBoost: 2.0,
+    categories: ["clothing", "food", "home"],
+    advice: "Push red-and-white themed sarees, panjabis, hilsa, traditional foods.",
+    adviceBn: "লাল-সাদা শাড়ি, পাঞ্জাবি, ইলিশ, ঐতিহ্যবাহী খাবার প্রোমোট করুন।",
+  },
+  {
+    id: "eid-ul-adha-2027",
+    name: "Eid-ul-Adha",
+    nameBn: "ঈদ-উল-আযহা",
+    date: "2027-05-17",
+    leadDays: 14,
+    peakBoost: 2.6,
+    categories: ["clothing", "home", "food"],
+    advice: "Stock cooking essentials, knives, freezer storage, festive clothing.",
+    adviceBn: "রান্নার সামগ্রী, ছুরি, ফ্রিজার ব্যাগ, উৎসবের পোশাক মজুত করুন।",
+  },
+  {
+    id: "durga-puja-2027",
+    name: "Durga Puja",
+    nameBn: "দুর্গা পূজা",
+    date: "2027-10-08",
+    leadDays: 14,
+    peakBoost: 2.2,
+    categories: ["clothing", "beauty", "home"],
+    advice: "Sarees, jewellery, sweets, decorative items see major lift.",
+    adviceBn: "শাড়ি, গহনা, মিষ্টি, সাজসজ্জার সামগ্রীর চাহিদা বাড়ে।",
+  },
+  {
+    id: "victory-day-2027",
+    name: "Victory Day",
+    nameBn: "বিজয় দিবস",
+    date: "2027-12-16",
+    leadDays: 7,
+    peakBoost: 1.5,
+    categories: ["clothing", "home"],
+    advice: "Red-and-green themed clothing, flags, festive home items see a lift.",
+    adviceBn: "লাল-সবুজ পোশাক, পতাকা, উৎসবের হোম আইটেম বিক্রি বাড়ে।",
+  },
+  {
+    id: "winter-2027",
+    name: "Winter season",
+    nameBn: "শীতকাল",
+    date: "2027-12-15",
+    leadDays: 30,
+    peakBoost: 1.6,
+    categories: ["clothing", "home"],
+    advice: "Push blankets, jackets, warmers. Demand grows steadily Dec-Feb.",
+    adviceBn: "কম্বল, জ্যাকেট, হিটার বিক্রি বাড়ান। ডিসেম্বর-ফেব্রুয়ারিতে চাহিদা বাড়ে।",
+  },
 ];
 
 /** Returns a festival demand multiplier for a given date and category. */
@@ -119,4 +227,17 @@ export function upcomingFestivals(from: Date, days = 60): Festival[] {
     const d = new Date(f.date);
     return d >= from && d <= cutoff;
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+/**
+ * Returns the chronologically next festival after `from`, regardless of how
+ * far in the future it is. Used by the Forecast page to surface
+ * "next on the calendar: …" when the standard 60-day window is empty so
+ * the section never feels like a dead end.
+ */
+export function nextFestival(from: Date): Festival | null {
+  const upcoming = FESTIVALS.filter((f) => new Date(f.date) >= from).sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+  return upcoming[0] ?? null;
 }

@@ -7,7 +7,9 @@ import { getUploadHistory } from "@/lib/data/upload-history";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { UploadedDataTabs, type ProductRow, type SaleRow } from "./UploadedDataTabs";
 
-export const dynamic = "force-dynamic";
+// dynamic = "force-dynamic" is now owned by ./page.tsx — Next.js only honors
+// route-segment config exports from the actual page.tsx file. Keeping a
+// stray one here was dead noise.
 
 const MAX_PRODUCT_ROWS = 1000;
 const MAX_SALE_ROWS = 1000;

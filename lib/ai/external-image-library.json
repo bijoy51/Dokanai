@@ -1,0 +1,18 @@
+{
+  "ExtRice": ["/external-library/rice-1.jpg", "/external-library/rice-2.jpg"],
+  "ExtOil": ["/external-library/oil-1.jpg", "/external-library/oil-2.jpg"],
+  "ExtLentils": ["/external-library/dal-1.jpg", "/external-library/dal-2.jpg"],
+  "ExtSugar": ["/external-library/sugar-1.jpg"],
+  "ExtSpices": ["/external-library/spices-1.jpg", "/external-library/spices-2.jpg"],
+  "ExtCharger": ["/external-library/charger-1.jpg"],
+  "ExtCable": ["/external-library/cable-1.jpg"],
+  "ExtEarbuds": ["/external-library/earbuds-1.jpg", "/external-library/earbuds-2.jpg"],
+  "ExtBulb": ["/external-library/led-1.jpg", "/external-library/led-2.jpg"],
+  "ExtPills": ["/external-library/pills-1.jpg", "/external-library/pills-2.jpg"],
+  "ExtSyrup": ["/external-library/syrup-1.jpg"],
+  "ExtBandage": ["/external-library/bandage-1.jpg"],
+  "ExtSanitizer": ["/external-library/sanitizer-1.jpg", "/external-library/sanitizer-2.jpg"],
+  "ExtBedsheet": ["/external-library/bedsheet-1.jpg"],
+  "ExtBlanket": ["/external-library/blanket-1.jpg"],
+  "ExtPlate": ["/external-library/plate-1.jpg"]
+}

@@ -4,6 +4,8 @@
  * the page works identically against either source.
  */
 import { festivalCalendar } from "./forecast";
+import imageLibraryIndex from "./image-library-index.json";
+import externalImageLibrary from "./external-image-library.json";
 
 // ---------- request + response shapes (mirror ml-backend/app/schemas.py) ----------
 
@@ -457,37 +459,315 @@ function seasonalTrends(shopType: string): { up: TrendItem[]; down: TrendItem[] 
 }
 
 // ---------- popular styles ----------
+//
+// Earlier versions of this section showed a hard-coded archetype list keyed by
+// season ("Casual cotton kurti", "Graphic t-shirt", …) which was identical for
+// every clothing shop in a given month. The user explicitly flagged this as
+// non-functional: "these images are not changing." Replaced with a derivation
+// from the shop's own catalog + sales so the cards reflect THIS shop.
 
-const STYLE_BANK: Record<string, { label: string; emoji: string; momentum: number; note: string }[]> = {
-  ramadan_eid: [
-    { label: "Embroidered three-piece", emoji: "👗", momentum: 0.31, note: "top seller in clothing shops before Eid" },
-    { label: "Pastel cotton saree", emoji: "🥻", momentum: 0.26, note: "rising demand for light festive looks" },
-    { label: "Designer panjabi", emoji: "👔", momentum: 0.24, note: "men's Eid staple" },
-    { label: "Kids Eid frock", emoji: "👶", momentum: 0.2, note: "high-volume seasonal line" },
-    { label: "Anarkali kurti", emoji: "👚", momentum: 0.18, note: "popular semi-formal option" },
-  ],
-  boishakh: [
-    { label: "Red-and-white saree", emoji: "🥻", momentum: 0.3, note: "the Pohela Boishakh signature look" },
-    { label: "White cotton panjabi", emoji: "👔", momentum: 0.22, note: "men's Boishakh staple" },
-    { label: "Block-print kurti", emoji: "👚", momentum: 0.16, note: "traditional print, strong demand" },
-  ],
-  winter: [
-    { label: "Woolen shawl", emoji: "🧣", momentum: 0.29, note: "Dec-Feb essential" },
-    { label: "Quilted winter jacket", emoji: "🧥", momentum: 0.24, note: "best-selling outerwear" },
-    { label: "Knit sweater", emoji: "🧶", momentum: 0.19, note: "steady winter demand" },
-  ],
-  default: [
-    { label: "Casual cotton kurti", emoji: "👚", momentum: 0.12, note: "everyday best-seller" },
-    { label: "Graphic t-shirt", emoji: "👕", momentum: 0.1, note: "popular with younger buyers" },
-    { label: "Slim-fit shirt", emoji: "👔", momentum: 0.09, note: "office wear staple" },
-    { label: "Printed three-piece", emoji: "👗", momentum: 0.11, note: "broad appeal year-round" },
-  ],
-};
+// Maps the local product-type taxonomy used by extractAttributes() onto the
+// ML backend's image-library keys (see ml-backend/artifacts/image_library_index.json).
+// Each library key resolves to 5 real catalog photos served from
+// ${ML_BACKEND_URL}/images/<file>.jpg. The order of the entries matters
+// because we match by substring: more specific keys come first.
+const TYPE_TO_LIBRARY: Array<[string, string]> = [
+  ["three-piece", "Kurta Sets"],
+  ["three piece", "Kurta Sets"],
+  ["threepiece", "Kurta Sets"],
+  ["kurta set", "Kurta Sets"],
+  ["saree", "Sarees"],
+  ["shari", "Sarees"],
+  ["sari", "Sarees"],
+  ["panjabi", "Kurtas"],
+  ["punjabi", "Kurtas"],
+  ["kurta", "Kurtas"],
+  ["kurti", "Kurtis"],
+  ["tunic", "Tunics"],
+  ["t-shirt", "Tshirts"],
+  ["tshirt", "Tshirts"],
+  ["polo", "Tshirts"],
+  ["shirt", "Shirts"],
+  ["jeans", "Jeans"],
+  ["trouser", "Trousers"],
+  ["pant", "Trousers"],
+  ["legging", "Leggings"],
+  ["short", "Shorts"],
+  ["skirt", "Skirts"],
+  ["lehenga", "Dresses"],
+  ["dress", "Dresses"],
+  ["frock", "Dresses"],
+  ["gown", "Dresses"],
+  ["nightdress", "Nightdress"],
+  ["night suit", "Night suits"],
+  ["blouse", "Tops"],
+  ["top", "Tops"],
+  ["dupatta", "Dupatta"],
+  ["hijab", "Scarves"],
+  ["scarf", "Scarves"],
+  ["abaya", "Scarves"],
+  ["burka", "Scarves"],
+  ["shawl", "Stoles"],
+  ["stole", "Stoles"],
+  ["chador", "Stoles"],
+  ["sweater", "Sweaters"],
+  ["sweatshirt", "Sweatshirts"],
+  ["jacket", "Jackets"],
+  ["blazer", "Jackets"],
+  ["coat", "Jackets"],
+  ["cap", "Caps"],
+  ["tie", "Ties"],
+  ["belt", "Belts"],
+  ["sock", "Socks"],
+  ["watch", "Watches"],
+  ["sunglass", "Sunglasses"],
+  ["wallet", "Wallets"],
+  ["handbag", "Handbags"],
+  ["clutch", "Clutches"],
+  ["backpack", "Backpacks"],
+  ["duffel", "Duffel Bag"],
+  ["laptop bag", "Laptop Bag"],
+  ["earring", "Earrings"],
+  ["necklace", "Necklace and Chains"],
+  ["chain", "Necklace and Chains"],
+  ["pendant", "Pendant"],
+  ["ring", "Ring"],
+  ["bangle", "Bangle"],
+  ["heel", "Heels"],
+  ["sandal", "Sandals"],
+  ["flat", "Flats"],
+  ["flip flop", "Flip Flops"],
+  ["formal shoe", "Formal Shoes"],
+  ["casual shoe", "Casual Shoes"],
+  ["sport shoe", "Sports Shoes"],
+  ["sneaker", "Sports Shoes"],
+  ["lipstick", "Lipstick"],
+  ["lip gloss", "Lip Gloss"],
+  ["nail polish", "Nail Polish"],
+  ["kajal", "Kajal and Eyeliner"],
+  ["eyeliner", "Kajal and Eyeliner"],
+  ["perfume", "Perfume and Body Mist"],
+  ["body mist", "Perfume and Body Mist"],
+  ["attar", "Perfume and Body Mist"],
+  ["deodorant", "Deodorant"],
+  ["body spray", "Deodorant"],
+  ["bra", "Bra"],
+  ["brief", "Briefs"],
+  ["innerwear", "Innerwear Vests"],
+  ["vest", "Innerwear Vests"],
+  ["cufflink", "Cufflinks"],
+  // ----- non-fashion (Ext*): photos hosted on Vercel in /public/external-library/ -----
+  // Grocery
+  ["rice", "ExtRice"],
+  ["chal", "ExtRice"],
+  ["sunflower oil", "ExtOil"],
+  ["cooking oil", "ExtOil"],
+  ["mustard oil", "ExtOil"],
+  ["oil", "ExtOil"],
+  ["tel", "ExtOil"],
+  ["ghee", "ExtOil"],
+  ["lentil", "ExtLentils"],
+  ["dal", "ExtLentils"],
+  ["mosur", "ExtLentils"],
+  ["chola", "ExtLentils"],
+  ["chickpea", "ExtLentils"],
+  ["sugar", "ExtSugar"],
+  ["chini", "ExtSugar"],
+  ["spice", "ExtSpices"],
+  ["masala", "ExtSpices"],
+  ["moshla", "ExtSpices"],
+  // Electronics
+  ["charger", "ExtCharger"],
+  ["adapter", "ExtCharger"],
+  ["power bank", "ExtCharger"],
+  ["powerbank", "ExtCharger"],
+  ["cable", "ExtCable"],
+  ["usb", "ExtCable"],
+  ["earbud", "ExtEarbuds"],
+  ["earphone", "ExtEarbuds"],
+  ["headphone", "ExtEarbuds"],
+  ["led", "ExtBulb"],
+  ["bulb", "ExtBulb"],
+  // Pharmacy
+  ["tablet", "ExtPills"],
+  ["capsule", "ExtPills"],
+  ["paracetamol", "ExtPills"],
+  ["vitamin", "ExtPills"],
+  ["supplement", "ExtPills"],
+  ["pill", "ExtPills"],
+  ["medicine", "ExtPills"],
+  ["syrup", "ExtSyrup"],
+  ["bandage", "ExtBandage"],
+  ["plaster", "ExtBandage"],
+  ["sanitizer", "ExtSanitizer"],
+  ["antiseptic", "ExtSanitizer"],
+  // Home goods
+  ["bedsheet", "ExtBedsheet"],
+  ["bed sheet", "ExtBedsheet"],
+  ["blanket", "ExtBlanket"],
+  ["kombol", "ExtBlanket"],
+  ["plate", "ExtPlate"],
+  ["bowl", "ExtPlate"],
+  ["dish", "ExtPlate"],
+];
 
-function popularStylesFor(shopType: string): PopularStyle[] {
-  if (shopType !== "clothing") return [];
-  const items = STYLE_BANK[seasonBucket()] ?? STYLE_BANK.default;
-  return items.map((it) => ({ ...it, sample_images: [] }));
+const LIB_INDEX = imageLibraryIndex as Record<string, string[]>;
+// External library: photos bundled into the Next.js build under
+// /public/external-library/. Covers grocery / electronics / pharmacy /
+// home for shop types the ML backend's fashion-only library doesn't reach.
+// Entries are URL-safe paths starting with "/" — Vercel serves them
+// directly from the same origin, so no imageBaseUrl is needed.
+const EXT_INDEX = externalImageLibrary as Record<string, string[]>;
+
+// Pre-compile word-boundary regexes once at module load. Substring matching
+// (the previous approach) caused short needles like "bra" to match "brand"
+// and "led" to match "called" — false positives that would route grocery
+// products to the wrong library. \b ensures whole-word matches; trailing
+// `s?` lets singular needles still match common plurals ("earbud" → "earbuds",
+// "pill" → "pills", "lentil" → "lentils") without bloating the table.
+const TYPE_PATTERNS: Array<[RegExp, string]> = TYPE_TO_LIBRARY.map(
+  ([needle, libKey]) => {
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return [new RegExp(`\\b${escaped}s?\\b`, "i"), libKey];
+  },
+);
+
+function libraryKeyFor(productType: string | null | undefined, title: string): string | null {
+  const probe = `${productType ?? ""} ${title ?? ""}`;
+  for (const [pattern, libKey] of TYPE_PATTERNS) {
+    if (pattern.test(probe)) return libKey;
+  }
+  return null;
+}
+
+/**
+ * Returns absolute URLs to up to 4 real catalog photos for a library key.
+ *
+ * Two backends:
+ *   - Ext* keys → photos in /public/external-library/, served by Vercel
+ *     directly. No imageBaseUrl needed.
+ *   - Other keys → the ML backend's fashion image library. Served at
+ *     `${imageBaseUrl}/images/<file>.jpg`. Returns [] without an
+ *     imageBaseUrl.
+ *
+ * `occurrence` rotates the slice so two cards mapped to the same library
+ * key (e.g., Polo Shirt + Graphic T-Shirt both → "Tshirts") get different
+ * hero photos. Each library has 1-5 files.
+ */
+function sampleImagesFor(
+  libraryKey: string | null,
+  imageBaseUrl: string | undefined,
+  occurrence = 0,
+): string[] {
+  if (!libraryKey) return [];
+
+  // External (Vercel-hosted) library — no base URL required.
+  const extFiles = EXT_INDEX[libraryKey];
+  if (extFiles && extFiles.length > 0) {
+    const off = ((occurrence % extFiles.length) + extFiles.length) % extFiles.length;
+    const rotated = [...extFiles.slice(off), ...extFiles.slice(0, off)];
+    return rotated.slice(0, 4);
+  }
+
+  // ML-backend-hosted library — needs imageBaseUrl to construct full URLs.
+  if (!imageBaseUrl) return [];
+  const files = LIB_INDEX[libraryKey];
+  if (!files || files.length === 0) return [];
+  const base = imageBaseUrl.replace(/\/+$/, "");
+  const off = ((occurrence % files.length) + files.length) % files.length;
+  const rotated = [...files.slice(off), ...files.slice(0, off)];
+  return rotated.slice(0, 4).map((f) => `${base}/images/${f}`);
+}
+
+function noteForStyle(units30: number, momentum: number): string {
+  if (units30 === 0) return "in stock — no recent sales yet";
+  if (momentum > 0.5) return `${units30} units in 30 days · accelerating`;
+  if (momentum > 0.1) return `${units30} units in 30 days · trending up`;
+  if (momentum < -0.1) return `${units30} units in 30 days · slowing down`;
+  return `${units30} units in 30 days · steady`;
+}
+
+/**
+ * Build the "Popular items right now" cards from the actual shop catalog
+ * and sales history. Ranks listings by 30-day units sold (descending), then
+ * by stock as a tiebreaker for shops with no sales data, then by price.
+ *
+ * POLICY: we never fall back to emoji placeholders. A card is only emitted
+ * when the product matches an image library (fashion/beauty on the ML
+ * backend, or grocery/electronics/pharmacy/home in /public/external-library/).
+ * Products whose type maps to neither are dropped. If nothing matches,
+ * returns [] — the UI then hides the section entirely.
+ *
+ * `imageBaseUrl` is only needed for ML-backend keys. External (Vercel-hosted)
+ * library keys still work when the ML backend is offline.
+ */
+export function derivePopularStylesFromCatalog(
+  listings: AnalyzeShopRequest["listings"],
+  sales: AnalyzeShopRequest["sales"] | undefined,
+  imageBaseUrl?: string,
+): PopularStyle[] {
+  if (!listings.length) return [];
+  const catalog = listings.map(extractAttributes);
+  const today = new Date();
+  const r30 = new Map<string, number>();
+  const p30 = new Map<string, number>();
+  for (const s of sales ?? []) {
+    const d = new Date(s.date);
+    if (isNaN(d.getTime())) continue;
+    const age = daysBetween(d, today);
+    const key = (s.product || "").trim().toLowerCase();
+    if (!key) continue;
+    const q = Number(s.qty) || 1;
+    if (age >= 0 && age < 30) r30.set(key, (r30.get(key) ?? 0) + q);
+    else if (age >= 30 && age < 60) p30.set(key, (p30.get(key) ?? 0) + q);
+  }
+
+  const scored = listings.map((l, i) => {
+    const key = (l.title ?? "").trim().toLowerCase();
+    const units30 = r30.get(key) ?? 0;
+    const prior = p30.get(key) ?? 0;
+    let momentum = 0;
+    if (prior > 0) momentum = (units30 - prior) / prior;
+    else if (units30 > 0) momentum = 0.25;
+    return {
+      idx: i,
+      title: l.title,
+      productType: catalog[i]?.product_type ?? null,
+      stock: typeof l.stock === "number" ? l.stock : 0,
+      price: typeof l.price === "number" ? l.price : 0,
+      units30,
+      momentum,
+    };
+  });
+
+  scored.sort((a, b) => {
+    if (b.units30 !== a.units30) return b.units30 - a.units30;
+    if (b.stock !== a.stock) return b.stock - a.stock;
+    return b.price - a.price;
+  });
+
+  // Walk the ranked list and emit a card ONLY when the product maps to a
+  // library key with real photos. Drop the rest. Stop at 4 cards.
+  // libUsage tracks repeats so two cards on the same library key (e.g.
+  // Polo Shirt + Graphic T-Shirt both → "Tshirts") pick different photos.
+  const libUsage = new Map<string, number>();
+  const out: PopularStyle[] = [];
+  for (const s of scored) {
+    const libKey = libraryKeyFor(s.productType, s.title);
+    if (!libKey) continue;
+    const images = sampleImagesFor(libKey, imageBaseUrl, libUsage.get(libKey) ?? 0);
+    if (images.length === 0) continue;
+    libUsage.set(libKey, (libUsage.get(libKey) ?? 0) + 1);
+    out.push({
+      label: s.title,
+      momentum: Math.max(0, Math.round(s.momentum * 100) / 100),
+      note: noteForStyle(s.units30, s.momentum),
+      emoji: "",
+      sample_images: images,
+    });
+    if (out.length >= 4) break;
+  }
+  return out;
 }
 
 // ---------- festival outlook ----------
@@ -513,7 +793,11 @@ export function analyzeShopStub(req: AnalyzeShopRequest): AnalyzeShopResponse {
   const missing_goods = missingGoodsFor(shop_type.label, catalog);
   const trending = sales.length ? trendsFromSales(shop_type.label, sales) : seasonalTrends(shop_type.label);
   const festival_outlook = festivalOutlook();
-  const popular_styles = popularStylesFor(shop_type.label);
+  // Derive for ALL shop types — grocery, electronics, pharmacy, etc. The
+  // image library only carries fashion / beauty / accessories, so those
+  // shops get real photos; other categories fall back to type-matched
+  // emojis (🍚 rice, 🔌 charger, 💊 medicine, …) from EMOJI_BY_TYPE.
+  const popular_styles = derivePopularStylesFromCatalog(listings, sales);
 
   const uploaded_image_analysis: UploadedImageAnalysis[] = (req.images ?? []).slice(0, 6).map((_, i) => {
     const top = popular_styles[0] ?? { label: "Casual cotton kurti", momentum: 0.12 };

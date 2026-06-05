@@ -1,8 +1,9 @@
 import { ForecastChart } from "@/components/charts/ForecastChart";
 import { dailyForecastTotal, festivalCalendar, forecastAll } from "@/lib/ai/forecast";
+import { nextFestival } from "@/lib/data/festivals";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatNumber } from "@/lib/utils";
-import { CalendarDays, AlertTriangle, TrendingUp } from "lucide-react";
+import { CalendarDays, AlertTriangle, TrendingUp, CalendarHeart } from "lucide-react";
 import { isShopEmpty } from "@/lib/data/store";
 import { NoDataState } from "@/components/NoDataState";
 
@@ -12,6 +13,9 @@ export default function ForecastPage({ params }: { params: { locale: string } })
   const daily = dailyForecastTotal();
   const all = forecastAll();
   const fests = festivalCalendar();
+  // When the 60-day window is empty, surface the next-ever festival so the
+  // section doesn't read as a dead end (see lib/data/festivals.nextFestival).
+  const nextEver = fests.length === 0 ? nextFestival(new Date()) : null;
 
   const movers = [...all].sort((a, b) => b.forecastNext7 - a.forecastNext7).slice(0, 8);
   const dead = [...all]
@@ -37,25 +41,50 @@ export default function ForecastPage({ params }: { params: { locale: string } })
         <div className="text-sm font-medium mb-3 flex items-center gap-2">
           <CalendarDays className="w-4 h-4 text-brand-600" /> {t("forecast.upcoming", locale)}
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {fests.length === 0 && (
-            <div className="text-sm text-slate-500">No festivals in the next 60 days.</div>
-          )}
-          {fests.map((f) => (
-            <div key={f.id} className="rounded-md border border-amber-200 bg-amber-50 p-3">
-              <div className="font-medium text-amber-900">
-                {locale === "bn" ? f.nameBn : f.name}
+        {fests.length === 0 ? (
+          <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+            <div className="text-sm text-slate-600">{t("forecast.noNearFestivals", locale)}</div>
+            {nextEver && (
+              <div className="mt-3 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-md bg-amber-100 border border-amber-200 grid place-items-center text-amber-700 shrink-0">
+                  <CalendarHeart className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-wide text-slate-500">
+                    {t("forecast.nextEver", locale)}
+                  </div>
+                  <div className="text-sm font-medium text-slate-900">
+                    {locale === "bn" ? nextEver.nameBn : nextEver.name}{" "}
+                    <span className="text-xs text-slate-500 font-normal">· {nextEver.date}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-slate-600">
+                    {locale === "bn" ? nextEver.adviceBn : nextEver.advice}
+                  </div>
+                  <div className="mt-1 inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                    ×{nextEver.peakBoost.toFixed(1)} {t("forecast.boostLabel", locale)}
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-amber-700 mt-0.5">{f.date}</div>
-              <div className="mt-2 text-sm text-amber-900">
-                {locale === "bn" ? f.adviceBn : f.advice}
+            )}
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {fests.map((f) => (
+              <div key={f.id} className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <div className="font-medium text-amber-900">
+                  {locale === "bn" ? f.nameBn : f.name}
+                </div>
+                <div className="text-xs text-amber-700 mt-0.5">{f.date}</div>
+                <div className="mt-2 text-sm text-amber-900">
+                  {locale === "bn" ? f.adviceBn : f.advice}
+                </div>
+                <div className="mt-2 inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-amber-200 text-amber-900">
+                  ×{f.peakBoost.toFixed(1)} {t("forecast.boostLabel", locale)}
+                </div>
               </div>
-              <div className="mt-2 inline-flex items-center text-[11px] px-2 py-0.5 rounded bg-amber-200 text-amber-900">
-                ×{f.peakBoost.toFixed(1)} demand boost
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid lg:grid-cols-2 gap-6 mt-6">

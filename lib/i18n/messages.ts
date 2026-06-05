@@ -193,6 +193,9 @@ const en: Dict = {
   "forecast.movers": "Top movers next week",
   "forecast.units": "units",
   "forecast.daysOfStock": "days of stock",
+  "forecast.boostLabel": "demand boost",
+  "forecast.noNearFestivals": "Quiet stretch — no major festivals in the next 60 days.",
+  "forecast.nextEver": "Next on the calendar",
 
   // pricing
   "pricing.title": "AI Pricing & Smart Bundles",
@@ -797,6 +800,9 @@ const bn: Dict = {
   "forecast.movers": "আগামী সপ্তাহের সেরা মুভার",
   "forecast.units": "ইউনিট",
   "forecast.daysOfStock": "দিনের স্টক",
+  "forecast.boostLabel": "চাহিদা বৃদ্ধি",
+  "forecast.noNearFestivals": "শান্ত সময় — আগামী ৬০ দিনে কোনো বড় উৎসব নেই।",
+  "forecast.nextEver": "ক্যালেন্ডারে পরবর্তী",
 
   "pricing.title": "AI প্রাইসিং ও স্মার্ট বান্ডেল",
   "pricing.subtitle": "ইলাস্টিসিটি-সচেতন দাম পরামর্শ ও কো-পারচেজ বান্ডেল।",

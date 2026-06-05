@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { getStore } from "@/lib/data/store";
 import { getSession } from "@/lib/auth";
 import { hydrateImported } from "@/lib/data/imported";
-import { analyzeShopStub, type AnalyzeShopRequest, type AnalyzeShopResponse } from "@/lib/ai/shop-analysis";
+import {
+  analyzeShopStub,
+  derivePopularStylesFromCatalog,
+  type AnalyzeShopRequest,
+  type AnalyzeShopResponse,
+} from "@/lib/ai/shop-analysis";
 
 /**
  * /api/analyze-shop
@@ -91,6 +96,10 @@ export async function POST(req: Request) {
       // images. Rewrite them to absolute URLs so the browser fetches them
       // from the ML backend host instead of the Vercel domain.
       rewriteImageUrls(json, base);
+      // The ML backend's popular_styles is a seasonal archetype list that's
+      // identical for every clothing shop. Override it with a shop-specific
+      // derivation so the cards reflect THIS shop's catalog and sales.
+      overridePopularStyles(json, payload, base);
       return NextResponse.json(json);
     } catch (err) {
       const stub = analyzeShopStub(payload);
@@ -114,4 +123,28 @@ function rewriteImageUrls(resp: AnalyzeShopResponse, base: string): void {
       }
     }
   }
+}
+
+/**
+ * Replace popular_styles with a derivation from THIS shop's catalog + sales.
+ * Runs for every shop type — grocery, electronics, pharmacy, etc. — not
+ * just clothing. Shops whose products map to the ML image library (fashion,
+ * beauty, accessories, bags, shoes, jewelry) get real photos; other
+ * categories fall back to type-matched emojis. If the derivation produces
+ * nothing (no listings), leaves the original response untouched.
+ */
+function overridePopularStyles(
+  resp: AnalyzeShopResponse,
+  payload: AnalyzeShopRequest,
+  imageBaseUrl: string,
+): void {
+  // Always overwrite — even with []. If no product matches the image library,
+  // the section must HIDE (not show emoji placeholders) per the no-emoji
+  // policy. Leaving the ML backend's archetype list in place would resurrect
+  // the generic "Casual cotton kurti" / "Graphic t-shirt" cards.
+  resp.popular_styles = derivePopularStylesFromCatalog(
+    payload.listings,
+    payload.sales,
+    imageBaseUrl,
+  );
 }

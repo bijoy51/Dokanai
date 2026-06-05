@@ -62,10 +62,23 @@ export function DashboardNav({ locale }: { locale: Locale }) {
             href={`/${locale}${l.href}`}
             aria-current={active ? "page" : undefined}
             className={
-              "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors " +
+              // base layout
+              "relative flex items-center gap-2 px-3 py-2 rounded-md text-sm " +
+              // hover motion: subtle scale-up from the left edge + soft
+              // shadow + z-bump so the item lifts cleanly above its
+              // neighbours. No rotation. motion-safe: prefix gates the
+              // transform behind the user's OS-level reduced-motion
+              // preference; the colour + shadow hover state still applies.
+              "origin-left transform-gpu transition-all duration-200 ease-out " +
+              "hover:shadow-md hover:z-10 focus-visible:z-10 " +
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 " +
               (active
-                ? "bg-brand-50 text-brand-900 font-medium border border-brand-200"
-                : "text-slate-700 hover:bg-slate-100")
+                ? // Active row already has its own coloured box; scale is
+                  // dialled down so it doesn't shout.
+                  "bg-brand-50 text-brand-900 font-medium border border-brand-200 " +
+                  "motion-safe:hover:scale-[1.02] motion-safe:focus-visible:scale-[1.02]"
+                : "text-slate-700 hover:bg-slate-100 " +
+                  "motion-safe:hover:scale-[1.04] motion-safe:focus-visible:scale-[1.04]")
             }
           >
             <l.icon className={"w-4 h-4 shrink-0 " + (active ? "text-brand-700" : "text-slate-500")} />
