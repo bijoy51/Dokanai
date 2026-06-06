@@ -17,6 +17,7 @@ import {
 import { t, type Locale } from "@/lib/i18n/messages";
 import { TypingText } from "./TypingText";
 import { SuggestionChips, getInitialSuggestions, getFollowUpSuggestions } from "./Suggestions";
+import { PilotVoiceMic } from "./PilotVoiceMic";
 
 const NICKNAME = "Pilot";
 
@@ -55,6 +56,10 @@ export function PilotClient({ locale }: { locale: Locale }) {
   // no longer drags them back. A ref (not state) so that the closure inside
   // AssistantMarkdown's onTick reads the current value without re-renders.
   const stickRef = useRef(true);
+  // Armed by the voice mic when the user starts a voice turn — the next
+  // assistant reply gets read aloud via SpeechSynthesis. Reset after a
+  // single reply so subsequent text-typed messages stay silent.
+  const speakNextReplyRef = useRef(false);
 
   const scrollToBottom = () => {
     if (!stickRef.current) return;
@@ -148,6 +153,13 @@ export function PilotClient({ locale }: { locale: Locale }) {
     if (currentChatId === id) newChat();
   };
 
+  /** Called by PilotVoiceMic when the user finishes speaking. Arms the
+   *  TTS-the-next-reply flag and sends the transcript as a chat message. */
+  const onVoiceTranscript = (transcript: string) => {
+    speakNextReplyRef.current = true;
+    void send(transcript);
+  };
+
   const send = async (text?: string) => {
     const msg = (text ?? input).trim();
     if (!msg || sending) return;
@@ -171,7 +183,15 @@ export function PilotClient({ locale }: { locale: Locale }) {
       const toolNames: string[] | undefined = Array.isArray(data.toolCalls)
         ? data.toolCalls.map((tc: { name: string }) => tc.name)
         : undefined;
-      setMessages((m) => [...m, { role: "assistant", content: data.assistant ?? "", typed: true, toolNames }]);
+      const assistantText: string = data.assistant ?? "";
+      setMessages((m) => [...m, { role: "assistant", content: assistantText, typed: true, toolNames }]);
+      // If this turn was started by the voice mic, read the reply aloud.
+      // Language is detected from the reply text (Bangla unicode range) so
+      // a user speaking Bangla on an /en/ page still hears a Bangla reply.
+      if (speakNextReplyRef.current) {
+        speakNextReplyRef.current = false;
+        speakReply(assistantText, locale);
+      }
       if (!currentChatId && data.chatId) {
         setCurrentChatId(data.chatId);
         setHistory((h) => [
@@ -377,6 +397,12 @@ export function PilotClient({ locale }: { locale: Locale }) {
             placeholder={t("pilot.inputPlaceholder", locale)}
             className="flex-1 min-w-0 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 max-h-32"
           />
+          <PilotVoiceMic
+            locale={locale}
+            disabled={sending}
+            onTranscript={onVoiceTranscript}
+            setError={setError}
+          />
           <button
             type="submit"
             disabled={sending || !input.trim()}
@@ -551,6 +577,41 @@ function AssistantMarkdown({
       </ReactMarkdown>
     </div>
   );
+}
+
+/**
+ * Reads `text` aloud via the browser's SpeechSynthesis. Picks the language
+ * tag from the content itself — any Bangla codepoint in the U+0980-U+09FF
+ * block routes to bn-BD; otherwise to en-US. Falls back to the UI locale
+ * if the reply somehow has zero alphabetic content. Best-effort: silently
+ * no-ops on browsers that don't expose SpeechSynthesis or that lack a
+ * matching voice (the user still has the on-screen reply).
+ */
+function speakReply(text: string, uiLocale: Locale) {
+  if (!text || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const hasBangla = /[ঀ-৿]/.test(text);
+    const hasLatin = /[a-zA-Z]/.test(text);
+    const lang =
+      hasBangla && !hasLatin
+        ? "bn-BD"
+        : hasBangla && hasLatin
+          ? // Mixed content — favour Bangla so Bangla portions sound right;
+            // English mixed into a Bangla sentence still degrades acceptably.
+            "bn-BD"
+          : hasLatin
+            ? "en-US"
+            : uiLocale === "bn"
+              ? "bn-BD"
+              : "en-US";
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    utter.rate = 0.95;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utter);
+  } catch {
+    /* TTS is a nice-to-have — never fail the reply because of it */
+  }
 }
 
 function Avatar({ role }: { role: "user" | "assistant" }) {

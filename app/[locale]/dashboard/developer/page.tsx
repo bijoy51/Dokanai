@@ -1,2 +1,2 @@
 export const dynamic = "force-dynamic";
-export { default } from "./Voice";
+export { default } from "./Developer";

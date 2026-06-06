@@ -6,7 +6,7 @@ import { t, type Locale } from "@/lib/i18n/messages";
 import { KhataUploader } from "./KhataUploader";
 import { PhotoUploader } from "./PhotoUploader";
 import { PdfUploader } from "./PdfUploader";
-import { LiveSyncPanel } from "./LiveSyncPanel";
+import { LiveSyncTabs } from "./LiveSyncTabs";
 
 /**
  * Tabbed shell for Khata-to-Cloud onboarding.
@@ -15,8 +15,9 @@ import { LiveSyncPanel } from "./LiveSyncPanel";
  *   - CSV       -> the existing KhataUploader (unchanged behavior + flow)
  *   - Photos    -> PhotoUploader: 1-8 images -> /api/import/extract via OpenAI Vision
  *   - PDF       -> PdfUploader:   1 PDF      -> /api/import/extract via pdf-parse + OpenAI
- *   - Live Sync -> LiveSyncPanel: pushes from a Google Sheet via Apps Script
- *                  every time the sheet is edited (~30s debounce).
+ *   - Live Sync -> LiveSyncPanel: pulls from a Google Sheet via the
+ *                  Sheets API. User signs in with Google once, binds a
+ *                  sheet by ID, and a Vercel Cron re-pulls every 5 min.
  *
  * Each tab is independent — switching between tabs preserves whatever the
  * user had selected (files stay in component state, errors stay localised
@@ -68,7 +69,10 @@ export function OnboardingTabs({ locale }: { locale: Locale }) {
       {tab === "csv" && <KhataUploader locale={locale} />}
       {tab === "photos" && <PhotoUploader locale={locale} />}
       {tab === "pdf" && <PdfUploader locale={locale} />}
-      {tab === "live" && <LiveSyncPanel locale={locale} />}
+      {/* Live Sync hands off to its own sub-tab shell so the Google Sheets
+          and Zapier integrations sit behind sibling sub-tabs rather than
+          stacked panels. Each owns its own state + API + kv namespace. */}
+      {tab === "live" && <LiveSyncTabs locale={locale} />}
     </div>
   );
 }

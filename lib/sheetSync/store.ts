@@ -1,167 +1,115 @@
 /**
- * Per-account state for the "Live Sync from Google Sheets" feature.
+ * Per-shop sheet-binding state for the pull-based Live Sync.
  *
- * Two KV keys per shop:
- *   - `sheet-sync:<email>`       — full state object (token, shopId,
- *                                  counters, last error). Source of truth.
- *   - `sheet-sync-by-shop:<id>`  — reverse lookup so the public webhook
- *                                  route can resolve a shopId → email
- *                                  without scanning every account.
+ * In the new model the user signs in with Google (state lives in
+ * lib/google/oauth.ts), then binds ONE Google Sheet to their shop by
+ * pasting its ID. This file owns that binding plus the sync counters.
  *
- * Why a shopId at all (vs putting the email in the URL): emails leak who
- * the shop owner is. shopId is a random opaque handle that's safe to put
- * in a URL the user pastes into a Google Apps Script.
+ * Two Postgres keys per shop:
+ *   - `sheet-binding:<email>`       — the binding row (sheetId, status,
+ *                                      counters, last error). Source of truth.
+ *   - `sheet-binding:_index`        — set of all bound emails so the Cron
+ *                                      can iterate without scanning the kv.
  *
- * Token discipline:
- *   - Generated server-side via crypto.randomBytes(32) → 64 hex chars.
- *   - Compared in constant time on webhook hits.
- *   - "Rotate" replaces it (old token immediately invalid). Useful if
- *     the user leaks the URL into a screenshot or a public repo.
+ * The previous incarnation of this file stored long-lived webhook tokens
+ * and reverse-lookup rows for an Apps Script push model. Both are gone —
+ * the new model is pull-only, authenticated by the user's OAuth refresh
+ * token in lib/google/oauth.ts.
  */
 
-import { randomBytes, timingSafeEqual } from "crypto";
 import { kvDelete, kvGet, kvPut } from "@/lib/kv";
 
 const norm = (email: string) => email.trim().toLowerCase();
-const stateKey = (email: string) => `sheet-sync:${norm(email)}`;
-const reverseKey = (shopId: string) => `sheet-sync-by-shop:${shopId}`;
+const bindingKey = (email: string) => `sheet-binding:${norm(email)}`;
+const INDEX_KEY = "sheet-binding:_index";
 
-export interface SheetSyncState {
-  /** Opaque, random, URL-safe handle. NEVER tied to the email. */
-  shopId: string;
-  /** 64-char hex secret. Verified per webhook hit. */
-  token: string;
-  /** ms epoch — when the connection was first set up. */
+export interface SheetBinding {
+  /** Google spreadsheet ID extracted from the URL or pasted directly. */
+  sheetId: string;
+  /** Title returned by the Sheets API at connect time — for display. */
+  sheetTitle?: string;
+  /** ms epoch — when this binding was created. */
   createdAt: number;
-  /** ms epoch — last successful webhook push. 0 = never. */
+  /** ms epoch — last successful sync. 0 = never. */
   lastSyncAt: number;
-  /** Running total of rows ever received from this shop. */
+  /** Running total of rows ever pulled from this sheet. */
   totalRowsEver: number;
-  /** Most recent error message from a failed webhook hit, for the UI. */
+  /** Most recent error from a failed sync attempt, for the UI. */
   lastError?: string;
   /** ms epoch — when the most recent error happened. */
   lastErrorAt?: number;
 }
 
-/** Public-safe slice surfaced to the connected UI. The full state never
- *  leaves the server — callers only ever see the webhook URL once, when
- *  they create or rotate the connection. */
-export interface SheetSyncPublic {
-  shopId: string;
-  createdAt: number;
-  lastSyncAt: number;
-  totalRowsEver: number;
-  lastError?: string;
-  lastErrorAt?: number;
+export interface SheetBindingPublic extends SheetBinding {}
+
+export async function getBinding(email: string): Promise<SheetBinding | null> {
+  return (await kvGet<SheetBinding>(bindingKey(email))) ?? null;
 }
 
-function newId(bytes: number): string {
-  return randomBytes(bytes).toString("hex");
-}
-
-function publicShape(s: SheetSyncState): SheetSyncPublic {
-  return {
-    shopId: s.shopId,
-    createdAt: s.createdAt,
-    lastSyncAt: s.lastSyncAt,
-    totalRowsEver: s.totalRowsEver,
-    lastError: s.lastError,
-    lastErrorAt: s.lastErrorAt,
-  };
-}
-
-export async function getSyncState(email: string): Promise<SheetSyncState | null> {
-  return (await kvGet<SheetSyncState>(stateKey(email))) ?? null;
-}
-
-export async function getSyncPublic(email: string): Promise<SheetSyncPublic | null> {
-  const s = await getSyncState(email);
-  return s ? publicShape(s) : null;
-}
-
-/**
- * Create a brand-new connection OR rotate the existing one's token.
- * Always returns the full token + URL — caller must show it to the user
- * and tell them to paste it; we won't re-surface it on subsequent GETs.
- */
-export interface ConnectionCredentials {
-  shopId: string;
-  token: string;
-  /** Helper for the UI — same as ${baseUrl}/api/import/webhook/${shopId}?token=${token} */
-  webhookUrl: string;
-}
-
-export async function createOrRotate(email: string, baseUrl: string): Promise<ConnectionCredentials> {
-  const existing = await getSyncState(email);
-  const shopId = existing?.shopId ?? newId(12); // 24 hex chars
-  const token = newId(32);                       // 64 hex chars
-  const next: SheetSyncState = existing
-    ? { ...existing, token, lastError: undefined, lastErrorAt: undefined }
+export async function setBinding(
+  email: string,
+  sheetId: string,
+  sheetTitle?: string,
+): Promise<SheetBinding> {
+  const existing = await getBinding(email);
+  const next: SheetBinding = existing
+    ? { ...existing, sheetId, sheetTitle, lastError: undefined, lastErrorAt: undefined }
     : {
-        shopId,
-        token,
+        sheetId,
+        sheetTitle,
         createdAt: Date.now(),
         lastSyncAt: 0,
         totalRowsEver: 0,
       };
-  await kvPut(stateKey(email), next);
-  // Reverse lookup is idempotent on the shopId (same value either way).
-  await kvPut(reverseKey(shopId), { email: norm(email) });
-  const trimmed = baseUrl.replace(/\/+$/, "");
-  return {
-    shopId,
-    token,
-    webhookUrl: `${trimmed}/api/import/webhook/${shopId}?token=${token}`,
-  };
+  await kvPut(bindingKey(email), next);
+  await indexAdd(email);
+  return next;
 }
 
-export async function disconnect(email: string): Promise<void> {
-  const s = await getSyncState(email);
-  if (!s) return;
-  await kvDelete(stateKey(email));
-  await kvDelete(reverseKey(s.shopId));
+export async function clearBinding(email: string): Promise<void> {
+  await kvDelete(bindingKey(email));
+  await indexRemove(email);
 }
 
-interface ReverseRecord {
-  email: string;
-}
-
-/** Resolve shopId → email, then verify the provided token in constant
- *  time. Returns the email on success; null on any failure (unknown
- *  shopId, wrong token, etc.). */
-export async function authenticateWebhook(shopId: string, token: string): Promise<string | null> {
-  if (!shopId || !token) return null;
-  const reverse = await kvGet<ReverseRecord>(reverseKey(shopId));
-  const email = reverse?.email?.trim()?.toLowerCase();
-  if (!email) return null;
-  const state = await getSyncState(email);
-  if (!state) return null;
-  // Constant-time compare to neutralise timing-side-channels.
-  const a = Buffer.from(state.token, "utf8");
-  const b = Buffer.from(token, "utf8");
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-  return email;
-}
-
-export async function recordSync(email: string, rowsThisPush: number): Promise<void> {
-  const s = await getSyncState(email);
-  if (!s) return;
-  await kvPut(stateKey(email), {
-    ...s,
+export async function recordSync(email: string, rowsThisPull: number): Promise<void> {
+  const b = await getBinding(email);
+  if (!b) return;
+  await kvPut(bindingKey(email), {
+    ...b,
     lastSyncAt: Date.now(),
-    totalRowsEver: s.totalRowsEver + Math.max(0, rowsThisPush),
+    totalRowsEver: b.totalRowsEver + Math.max(0, rowsThisPull),
     lastError: undefined,
     lastErrorAt: undefined,
-  } satisfies SheetSyncState);
+  } satisfies SheetBinding);
 }
 
 export async function recordError(email: string, message: string): Promise<void> {
-  const s = await getSyncState(email);
-  if (!s) return;
-  await kvPut(stateKey(email), {
-    ...s,
+  const b = await getBinding(email);
+  if (!b) return;
+  await kvPut(bindingKey(email), {
+    ...b,
     lastError: message.slice(0, 500),
     lastErrorAt: Date.now(),
-  } satisfies SheetSyncState);
+  } satisfies SheetBinding);
+}
+
+// ---------- email index (for the Cron sweep) ----------
+
+async function indexAdd(email: string): Promise<void> {
+  const idx = (await kvGet<{ emails: string[] }>(INDEX_KEY)) ?? { emails: [] };
+  const set = new Set(idx.emails.map((e) => e.trim().toLowerCase()));
+  set.add(norm(email));
+  await kvPut(INDEX_KEY, { emails: [...set] });
+}
+
+async function indexRemove(email: string): Promise<void> {
+  const idx = await kvGet<{ emails: string[] }>(INDEX_KEY);
+  if (!idx) return;
+  const next = idx.emails.filter((e) => e.trim().toLowerCase() !== norm(email));
+  await kvPut(INDEX_KEY, { emails: next });
+}
+
+export async function listBoundEmails(): Promise<string[]> {
+  const idx = await kvGet<{ emails: string[] }>(INDEX_KEY);
+  return idx?.emails ?? [];
 }

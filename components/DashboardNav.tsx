@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bot,
+  Code2,
   LayoutDashboard,
   TrendingUp,
   Tag,
   Sparkles,
   Megaphone,
   Users,
-  Mic,
   ShieldAlert,
   UploadCloud,
   History,
@@ -38,10 +38,10 @@ const LINKS: Array<{ key: string; href: string; icon: typeof LayoutDashboard }> 
   { key: "nav.recommendations", href: "/dashboard/recommendations", icon: Sparkles },
   { key: "nav.marketing", href: "/dashboard/marketing", icon: Megaphone },
   { key: "nav.customers", href: "/dashboard/customers", icon: Users },
-  { key: "nav.voice", href: "/dashboard/voice", icon: Mic },
   { key: "nav.rto", href: "/dashboard/rto", icon: ShieldAlert },
   { key: "nav.uploads", href: "/dashboard/uploads", icon: History },
   { key: "nav.onboarding", href: "/dashboard/onboarding", icon: UploadCloud },
+  { key: "nav.developer", href: "/dashboard/developer", icon: Code2 },
 ];
 
 function isActive(pathname: string, locale: Locale, href: string): boolean {
