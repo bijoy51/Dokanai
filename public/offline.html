@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DokanAI — You're offline</title>
+  <link rel="icon" href="/icons/favicon-32.png" />
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      display: grid;
+      place-items: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      max-width: 420px;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #16a34a;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    p  { color: #475569; line-height: 1.55; margin: 0 0 18px; }
+    a.btn {
+      display: inline-block;
+      background: #16a34a;
+      color: white;
+      text-decoration: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f172a; color: #f1f5f9; }
+      .card { background: #1e293b; border-color: #334155; }
+      p { color: #cbd5e1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">DokanAI</div>
+    <h1>You're offline.</h1>
+    <p>DokanAI needs an internet connection for live analyses, forecasts, and chat. Reconnect to keep going.</p>
+    <a class="btn" href="/en/dashboard" onclick="location.reload();return false;">Retry</a>
+  </div>
+</body>
+</html>

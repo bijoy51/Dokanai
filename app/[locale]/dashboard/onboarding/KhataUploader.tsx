@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
+import { DEMO_LOAD_EVENT, type DemoLoadEventDetail } from "./DemoDataBanner";
 
 // localStorage mirror so the data survives a serverless cold start.
 // DataSync (in the dashboard layout) re-POSTs this if the server lost it.
@@ -88,6 +89,12 @@ export function KhataUploader({ locale }: { locale: Locale }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState<{ products: number; customers: number; orders: number } | null>(null);
+  // True while at least one of the loaded files was sourced from the demo
+  // banner (rather than picked from disk). Drives the "for testing only"
+  // footer warning below the import button. Reset to false the moment the
+  // user picks their own file via the CsvPicker, swaps either side out,
+  // or completes an import.
+  const [demoLoaded, setDemoLoaded] = useState(false);
 
   const productsInput = useRef<HTMLInputElement>(null);
   const salesInput = useRef<HTMLInputElement>(null);
@@ -98,6 +105,37 @@ export function KhataUploader({ locale }: { locale: Locale }) {
       .then((s) => s && setStatus(s))
       .catch(() => {});
   }, []);
+
+  // Listen for the demo-data banner. When fired we pre-fill the two file
+  // pickers with the bundled clothing CSVs so the user just hits Import.
+  // We also clear any prior error / success so the UI doesn't show stale
+  // counts from a previous attempt.
+  useEffect(() => {
+    const onDemo = (e: Event) => {
+      const detail = (e as CustomEvent<DemoLoadEventDetail>).detail;
+      if (!detail) return;
+      setProductsFile(detail.productsFile);
+      setSalesFile(detail.salesFile);
+      setDemoLoaded(true);
+      setError("");
+      setDone(null);
+    };
+    window.addEventListener(DEMO_LOAD_EVENT, onDemo);
+    return () => window.removeEventListener(DEMO_LOAD_EVENT, onDemo);
+  }, []);
+
+  // Pickers that wrap setProductsFile / setSalesFile so that picking a
+  // real file (or clearing one) flips the "demo loaded" flag off — the
+  // testing-only warning shouldn't follow the user once they've swapped
+  // in their own data.
+  const pickProducts = (f: File | null) => {
+    setProductsFile(f);
+    setDemoLoaded(false);
+  };
+  const pickSales = (f: File | null) => {
+    setSalesFile(f);
+    setDemoLoaded(false);
+  };
 
   const runImport = async () => {
     const LOG = "[import]";
@@ -290,7 +328,7 @@ export function KhataUploader({ locale }: { locale: Locale }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div id="onboarding-csv-upload" className="rounded-xl border border-slate-200 bg-white p-5 scroll-mt-6">
         <div className="text-sm font-medium flex items-center gap-2 mb-1">
           <UploadCloud className="w-4 h-4 text-brand-600" />
           {t("ob.uploadTitle", locale)}
@@ -302,7 +340,7 @@ export function KhataUploader({ locale }: { locale: Locale }) {
           hint={t("ob.productsCsvHint", locale)}
           file={productsFile}
           inputRef={productsInput}
-          onPick={setProductsFile}
+          onPick={pickProducts}
         />
         <div className="h-3" />
         <CsvPicker
@@ -310,7 +348,7 @@ export function KhataUploader({ locale }: { locale: Locale }) {
           hint={t("ob.salesCsvHint", locale)}
           file={salesFile}
           inputRef={salesInput}
-          onPick={setSalesFile}
+          onPick={pickSales}
         />
 
         {error && (
@@ -328,6 +366,15 @@ export function KhataUploader({ locale }: { locale: Locale }) {
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
           {loading ? t("common.loading", locale) : t("ob.importBtn", locale)}
         </button>
+
+        {/* Footer warning — only when the currently-loaded pair came from the
+            demo banner. Picking a real CSV from disk clears the flag. */}
+        {demoLoaded && (
+          <div className="mt-3 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex items-start gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-px text-amber-600" />
+            <span>{t("ob.demo.testingOnly", locale)}</span>
+          </div>
+        )}
       </div>
 
       <p className="text-xs text-slate-400">{t("ob.tip", locale)}</p>

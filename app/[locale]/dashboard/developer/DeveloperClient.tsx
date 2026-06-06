@@ -3,15 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
+  ArrowRight,
+  BarChart3,
   Check,
   Code2,
   Copy,
+  Database,
   Gauge,
   Key as KeyIcon,
   Loader2,
   Plus,
   ShieldCheck,
   Trash2,
+  Zap,
 } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 
@@ -49,6 +53,7 @@ export function DeveloperClient({ locale }: { locale: Locale }) {
   const [sub, setSub] = useState<SubTab>("keys");
   return (
     <div>
+      <DeveloperBanner locale={locale} />
       <div className="flex items-center gap-1 mb-4 border-b border-slate-200 overflow-x-auto">
         <SubTabButton active={sub === "keys"} onClick={() => setSub("keys")} Icon={KeyIcon} label={t("dev.tab.keys", locale)} />
         <SubTabButton active={sub === "examples"} onClick={() => setSub("examples")} Icon={Code2} label={t("dev.tab.examples", locale)} />
@@ -392,13 +397,21 @@ console.log(forecast.top_movers.slice(0, 3));`,
         </ul>
       </div>
       {snippets.map((s) => (
-        <SnippetCard key={s.lang} title={s.title} code={s.code} />
+        <SnippetCard key={s.lang} lang={s.lang} title={s.title} code={s.code} />
       ))}
     </div>
   );
 }
 
-function SnippetCard({ title, code }: { title: string; code: string }) {
+function SnippetCard({
+  lang,
+  title,
+  code,
+}: {
+  lang: string;
+  title: string;
+  code: string;
+}) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -422,10 +435,212 @@ function SnippetCard({ title, code }: { title: string; code: string }) {
           {copied ? "Copied!" : "Copy"}
         </button>
       </div>
-      <pre className="m-0 px-4 py-3 text-[12px] font-mono text-slate-800 bg-slate-50 overflow-x-auto leading-relaxed">
-        {code}
+      <pre className="m-0 px-4 py-3 text-[12px] font-mono bg-slate-900 text-slate-100 overflow-x-auto leading-relaxed">
+        <HighlightedCode code={code} lang={lang} />
       </pre>
     </div>
+  );
+}
+
+// ---------- BANNER ----------
+
+/**
+ * Top-of-page banner. Sells the API in one glance: who it's for, what
+ * data flows in / what flows out. Uses a 3-stop gradient whose colours
+ * intentionally echo the syntax-highlighter palette (violet keywords,
+ * emerald comments, sky function calls) so the banner and the code
+ * blocks below feel like one design system.
+ */
+function DeveloperBanner({ locale }: { locale: Locale }) {
+  return (
+    <div className="relative overflow-hidden rounded-xl mb-5 p-5 sm:p-6 bg-gradient-to-br from-violet-600 via-sky-500 to-emerald-500 text-white shadow-lg">
+      {/* Soft radial highlights — decorative, no semantic value */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-30 mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 15% 20%, rgba(255,255,255,0.4) 0%, transparent 35%), radial-gradient(circle at 85% 80%, rgba(255,255,255,0.25) 0%, transparent 35%)",
+        }}
+        aria-hidden="true"
+      />
+      <div className="relative">
+        <div className="inline-flex items-center gap-1.5 text-[11px] uppercase tracking-widest font-semibold bg-white/15 backdrop-blur rounded-full px-2.5 py-1 mb-3">
+          <Code2 className="w-3 h-3" />
+          {t("dev.banner.eyebrow", locale)}
+        </div>
+        <h2 className="text-lg sm:text-2xl font-bold leading-tight max-w-3xl">
+          {t("dev.banner.title", locale)}
+        </h2>
+        <p className="mt-2 text-sm sm:text-base text-white/90 max-w-3xl leading-relaxed">
+          {t("dev.banner.body", locale)}
+        </p>
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-2.5 text-[12px] sm:text-sm font-medium">
+          <BannerStep Icon={Database} label={t("dev.banner.step1", locale)} />
+          <ArrowRight className="w-4 h-4 opacity-80 shrink-0" />
+          <BannerStep Icon={Zap} label={t("dev.banner.step2", locale)} />
+          <ArrowRight className="w-4 h-4 opacity-80 shrink-0" />
+          <BannerStep Icon={BarChart3} label={t("dev.banner.step3", locale)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BannerStep({
+  Icon,
+  label,
+}: {
+  Icon: typeof Database;
+  label: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-full px-2.5 py-1 ring-1 ring-white/20">
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </span>
+  );
+}
+
+// ---------- SYNTAX HIGHLIGHTER ----------
+
+/**
+ * Minimal per-language tokenizer. No external dependency — keeps the
+ * dashboard bundle small. Covers the four languages we publish snippets
+ * in (bash / python / php / node), each as a single mega-regex with
+ * named groups that an `exec` walk turns into <span> token slices.
+ *
+ * Token colour palette (Tailwind classes against bg-slate-900):
+ *   comment  → emerald  · string   → rose
+ *   keyword  → violet   · number   → amber
+ *   function → sky      · variable → cyan       · flag → yellow
+ *
+ * This is a "good-enough" highlighter, not a parser. Edge cases (nested
+ * template literals, single-line regex like / / ) are NOT handled — the
+ * snippets we ship don't use them. Don't extend this to handle full code
+ * input from the user; reach for shiki/prismjs if/when we need that.
+ */
+
+type TokenType =
+  | "comment"
+  | "string"
+  | "keyword"
+  | "number"
+  | "function"
+  | "variable"
+  | "flag"
+  | "text";
+
+const TOKEN_CLASS: Record<TokenType, string> = {
+  comment: "text-emerald-400",
+  string: "text-rose-300",
+  keyword: "text-violet-300",
+  number: "text-amber-300",
+  function: "text-sky-300",
+  variable: "text-cyan-300",
+  flag: "text-yellow-300",
+  text: "text-slate-100",
+};
+
+interface Tok {
+  type: TokenType;
+  value: string;
+}
+
+const LANG_REGEX: Record<string, RegExp> = {
+  curl: new RegExp(
+    [
+      String.raw`(?<comment>#[^\n]*)`,
+      String.raw`(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')`,
+      String.raw`(?<keyword>\b(?:curl|echo|export|cd|sleep|cat|set|true|false)\b)`,
+      String.raw`(?<flag>-[a-zA-Z]+)`,
+      String.raw`(?<number>\b\d+\b)`,
+    ].join("|"),
+    "g",
+  ),
+  python: new RegExp(
+    [
+      String.raw`(?<comment>#[^\n]*)`,
+      String.raw`(?<string>(?:f|r|b)?(?:"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'))`,
+      String.raw`(?<keyword>\b(?:import|from|def|return|if|elif|else|for|while|in|not|and|or|True|False|None|class|try|except|raise|with|as|lambda|yield|async|await|pass|break|continue|global|nonlocal|is|print)\b)`,
+      String.raw`(?<number>\b\d+(?:\.\d+)?\b)`,
+      String.raw`(?<function>\b[a-zA-Z_]\w*(?=\())`,
+    ].join("|"),
+    "g",
+  ),
+  php: new RegExp(
+    [
+      String.raw`(?<comment>\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/)`,
+      String.raw`(?<string>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')`,
+      String.raw`(?<variable>\$[a-zA-Z_]\w*)`,
+      String.raw`(?<keyword>\b(?:function|global|return|if|else|elseif|foreach|for|while|true|false|null|use|namespace|class|public|private|protected|new|echo|print|require|include|require_once|include_once|print_r|var_dump|array)\b|<\?php|\?>)`,
+      String.raw`(?<number>\b\d+(?:\.\d+)?\b)`,
+      String.raw`(?<function>\b[a-zA-Z_]\w*(?=\())`,
+    ].join("|"),
+    "g",
+  ),
+  node: new RegExp(
+    [
+      String.raw`(?<comment>\/\/[^\n]*|\/\*[\s\S]*?\*\/)`,
+      // Three quote families: "…", '…', and `…` (templates).
+      // Template literals: anything except a closing backtick OR a
+      // backslash-escaped char. ${…} stays inside the string as plain
+      // text — keeps the regex linear and matches what shiki does at
+      // its rough default.
+      "(?<string>\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)",
+      String.raw`(?<keyword>\b(?:const|let|var|function|return|if|else|for|while|do|switch|case|default|break|continue|new|class|extends|this|super|true|false|null|undefined|async|await|import|export|from|throw|try|catch|finally|in|of|typeof|instanceof)\b)`,
+      String.raw`(?<number>\b\d+(?:\.\d+)?\b)`,
+      String.raw`(?<function>\b[a-zA-Z_$][\w$]*(?=\())`,
+    ].join("|"),
+    "g",
+  ),
+};
+
+function tokenize(code: string, lang: string): Tok[] {
+  const re = LANG_REGEX[lang];
+  if (!re) return [{ type: "text", value: code }];
+  re.lastIndex = 0;
+  const out: Tok[] = [];
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(code)) !== null) {
+    if (m.index > lastIndex) {
+      out.push({ type: "text", value: code.slice(lastIndex, m.index) });
+    }
+    const groups = m.groups ?? {};
+    let matched: TokenType = "text";
+    for (const type of [
+      "comment",
+      "string",
+      "variable",
+      "keyword",
+      "flag",
+      "function",
+      "number",
+    ] as TokenType[]) {
+      if (groups[type]) {
+        matched = type;
+        break;
+      }
+    }
+    out.push({ type: matched, value: m[0] });
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < code.length) {
+    out.push({ type: "text", value: code.slice(lastIndex) });
+  }
+  return out;
+}
+
+function HighlightedCode({ code, lang }: { code: string; lang: string }) {
+  const tokens = tokenize(code, lang);
+  return (
+    <>
+      {tokens.map((tok, i) => (
+        <span key={i} className={TOKEN_CLASS[tok.type]}>
+          {tok.value}
+        </span>
+      ))}
+    </>
   );
 }
 

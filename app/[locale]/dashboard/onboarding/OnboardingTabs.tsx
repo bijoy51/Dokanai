@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FileSpreadsheet, FileText, Images, PlugZap } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { KhataUploader } from "./KhataUploader";
 import { PhotoUploader } from "./PhotoUploader";
 import { PdfUploader } from "./PdfUploader";
 import { LiveSyncTabs } from "./LiveSyncTabs";
+import { DEMO_LOAD_EVENT } from "./DemoDataBanner";
 
 /**
  * Tabbed shell for Khata-to-Cloud onboarding.
@@ -27,6 +28,16 @@ type TabKey = "csv" | "photos" | "pdf" | "live";
 
 export function OnboardingTabs({ locale }: { locale: Locale }) {
   const [tab, setTab] = useState<TabKey>("csv");
+
+  // The demo-data banner can be clicked while the user happens to be on
+  // any sub-tab (Photos / PDF / Live Sync). Force-switch back to CSV so
+  // the pre-filled file pickers are visible. Listening here keeps the
+  // banner orthogonal to the tab state.
+  useEffect(() => {
+    const onDemo = () => setTab("csv");
+    window.addEventListener(DEMO_LOAD_EVENT, onDemo);
+    return () => window.removeEventListener(DEMO_LOAD_EVENT, onDemo);
+  }, []);
 
   return (
     <div>

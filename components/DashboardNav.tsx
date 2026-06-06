@@ -6,6 +6,7 @@ import {
   BarChart3,
   Bot,
   Code2,
+  Download,
   LayoutDashboard,
   TrendingUp,
   Tag,
@@ -42,6 +43,7 @@ const LINKS: Array<{ key: string; href: string; icon: typeof LayoutDashboard }> 
   { key: "nav.uploads", href: "/dashboard/uploads", icon: History },
   { key: "nav.onboarding", href: "/dashboard/onboarding", icon: UploadCloud },
   { key: "nav.developer", href: "/dashboard/developer", icon: Code2 },
+  { key: "nav.install", href: "/dashboard/install", icon: Download },
 ];
 
 function isActive(pathname: string, locale: Locale, href: string): boolean {

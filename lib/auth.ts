@@ -9,7 +9,10 @@ import { cookies } from "next/headers";
 
 const SECRET = process.env.AUTH_SECRET || "dokanai-dev-secret-change-in-production";
 export const SESSION_COOKIE = "dokanai_session";
-export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+// 1-year persistent session. Bumped from 30 days so users who install
+// the PWA on their phone effectively never re-authenticate until they
+// explicitly tap "Log out" — matches the "sign in once" install UX.
+export const SESSION_MAX_AGE = 60 * 60 * 24 * 365;
 
 export interface Session {
   email: string;
