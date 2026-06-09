@@ -2,26 +2,25 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertCircle, CheckCircle2, FileText, Loader2, Sparkles, Trash2, Upload } from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Loader2, Package, Receipt, Sparkles, Trash2, Upload } from "lucide-react";
 import { t, type Locale } from "@/lib/i18n/messages";
 
 /**
- * PDF path of Khata-to-Cloud onboarding.
+ * PDF path of Khata-to-Cloud onboarding — dual upload variant.
  *
- * v1 reads SELECTABLE TEXT from the PDF (Excel export, digital invoice,
- * bKash statement, etc.) — pdf-parse on the server pulls text out and
- * GPT-4o-mini structures it into products + sales. For scanned PDFs
- * with no selectable text, we surface a clear error and direct the user
- * to the Photos tab instead.
+ * Two dropzones: products PDF + sales PDF. Either or both can be empty.
+ * On submit we POST both to /api/import/extract; the server hands both
+ * texts to GPT-4o-mini in a single call so the model can de-duplicate
+ * product names across the two sources. The model is instructed to treat
+ * the "products vs sales" labels as a HINT only — if the user has a
+ * messy ledger where one PDF mixes both, classification still works.
  */
 
-// Vercel serverless body limit is 4.5 MB — we leave headroom for the
-// multipart envelope. Compressing a PDF client-side would mean
-// rasterising every page (heavy). For now the limit stays here; the
-// error message tells the user how to split a bigger PDF or rasterise
-// pages to the Photos tab.
-const MAX_BYTES = 4_000_000;
+// Vercel serverless body limit is 4.5 MB combined across all files.
+const MAX_TOTAL_BYTES = 4_000_000;
 const DATASET_KEY = "dokanai:imported-dataset:v1";
+
+type Slot = "products" | "sales";
 
 interface ExtractResult {
   products: Array<Record<string, unknown>>;
@@ -31,40 +30,43 @@ interface ExtractResult {
 
 export function PdfUploader({ locale }: { locale: Locale }) {
   const router = useRouter();
-  const [file, setFile] = useState<File | null>(null);
+  const [productsFile, setProductsFile] = useState<File | null>(null);
+  const [salesFile, setSalesFile] = useState<File | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extracted, setExtracted] = useState<ExtractResult | null>(null);
   const [done, setDone] = useState<{ products: number; customers: number; orders: number } | null>(null);
   const [error, setError] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  const pickFile = (f: File) => {
+  const pickFile = (slot: Slot, f: File) => {
     setError("");
     setExtracted(null);
     if (!/pdf$/i.test(f.type) && !/\.pdf$/i.test(f.name)) {
       setError(t("ob.pdf.errType", locale));
       return;
     }
-    if (f.size > MAX_BYTES) {
-      setError(t("ob.pdf.errSize", locale).replace("{mb}", (MAX_BYTES / 1_000_000).toFixed(1)));
+    const otherSize = slot === "products" ? salesFile?.size ?? 0 : productsFile?.size ?? 0;
+    if (f.size + otherSize > MAX_TOTAL_BYTES) {
+      setError(t("ob.pdf.errSize", locale).replace("{mb}", (MAX_TOTAL_BYTES / 1_000_000).toFixed(1)));
       return;
     }
-    setFile(f);
+    if (slot === "products") setProductsFile(f);
+    else setSalesFile(f);
   };
 
   const analyze = async () => {
     setError("");
     setExtracted(null);
-    if (!file) {
-      setError(t("ob.pdf.errEmpty", locale));
+    if (!productsFile && !salesFile) {
+      setError(t("ob.pdf.errAtLeastOne", locale));
       return;
     }
     setAnalyzing(true);
     try {
       const fd = new FormData();
       fd.append("mode", "pdf");
-      fd.append("file", file, file.name);
+      if (productsFile) fd.append("productsFile", productsFile, productsFile.name);
+      if (salesFile) fd.append("salesFile", salesFile, salesFile.name);
       const res = await fetch("/api/import/extract", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {
@@ -135,56 +137,37 @@ export function PdfUploader({ locale }: { locale: Locale }) {
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-5">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf,.pdf"
-        hidden
-        onChange={(e) => e.target.files?.[0] && pickFile(e.target.files[0])}
-      />
+      <p className="text-xs text-slate-500 mb-4">{t("ob.pdf.splitNote", locale)}</p>
 
-      {/* Drop zone */}
-      <div
-        onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          if (e.dataTransfer.files?.[0]) pickFile(e.dataTransfer.files[0]);
-        }}
-        className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-brand-500 hover:bg-brand-50/40 rounded-lg p-6 text-center transition-colors"
-      >
-        <FileText className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-        <div className="text-sm font-medium text-slate-700">{t("ob.pdf.dropTitle", locale)}</div>
-        <div className="text-xs text-slate-500 mt-1">{t("ob.pdf.dropHint", locale)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <DropSlot
+          locale={locale}
+          slot="products"
+          file={productsFile}
+          onPick={(f) => pickFile("products", f)}
+          onClear={() => {
+            setProductsFile(null);
+            setExtracted(null);
+          }}
+        />
+        <DropSlot
+          locale={locale}
+          slot="sales"
+          file={salesFile}
+          onPick={(f) => pickFile("sales", f)}
+          onClear={() => {
+            setSalesFile(null);
+            setExtracted(null);
+          }}
+        />
       </div>
-
-      {file && (
-        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <FileText className="w-4 h-4 text-slate-500 shrink-0" />
-            <div className="text-sm text-slate-700 truncate">{file.name}</div>
-            <div className="text-xs text-slate-500 shrink-0">({(file.size / 1_000_000).toFixed(2)} MB)</div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setFile(null);
-              setExtracted(null);
-            }}
-            className="text-slate-500 hover:text-rose-700 p-1"
-            aria-label="Remove"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center">
         {!extracted && (
           <button
             type="button"
             onClick={analyze}
-            disabled={!file || analyzing}
+            disabled={(!productsFile && !salesFile) || analyzing}
             className="inline-flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-md px-4 py-2 disabled:opacity-50"
           >
             {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -246,5 +229,72 @@ export function PdfUploader({ locale }: { locale: Locale }) {
         </div>
       )}
     </section>
+  );
+}
+
+function DropSlot({
+  locale,
+  slot,
+  file,
+  onPick,
+  onClear,
+}: {
+  locale: Locale;
+  slot: Slot;
+  file: File | null;
+  onPick: (f: File) => void;
+  onClear: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const SlotIcon = slot === "products" ? Package : Receipt;
+  const eyebrow = slot === "products" ? t("ob.pdf.productsTitle", locale) : t("ob.pdf.salesTitle", locale);
+  const hint = slot === "products" ? t("ob.pdf.productsHint", locale) : t("ob.pdf.salesHint", locale);
+  const dropTitle =
+    slot === "products" ? t("ob.pdf.productsDropTitle", locale) : t("ob.pdf.salesDropTitle", locale);
+
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600 mb-2">
+        <SlotIcon className="w-3.5 h-3.5 text-brand-600" />
+        {eyebrow}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={(e) => e.target.files?.[0] && onPick(e.target.files[0])}
+      />
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (e.dataTransfer.files?.[0]) onPick(e.dataTransfer.files[0]);
+        }}
+        className="cursor-pointer border-2 border-dashed border-slate-300 hover:border-brand-500 hover:bg-brand-50/40 rounded-lg p-5 text-center transition-colors min-h-[140px] flex flex-col items-center justify-center"
+      >
+        <FileText className="w-7 h-7 text-slate-400 mb-2" />
+        <div className="text-sm font-medium text-slate-700">{dropTitle}</div>
+        <div className="text-[11px] text-slate-500 mt-1 leading-snug px-2">{hint}</div>
+      </div>
+      {file && (
+        <div className="mt-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <FileText className="w-4 h-4 text-slate-500 shrink-0" />
+            <div className="text-sm text-slate-700 truncate">{file.name}</div>
+            <div className="text-xs text-slate-500 shrink-0">({(file.size / 1_000_000).toFixed(2)} MB)</div>
+          </div>
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-slate-500 hover:text-rose-700 p-1"
+            aria-label="Remove"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

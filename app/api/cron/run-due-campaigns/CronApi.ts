@@ -32,18 +32,7 @@ import { hydrateImported } from "@/lib/data/imported";
 import { resolveAudience, type Recipient } from "@/lib/email/audience";
 import { renderCampaignEmail } from "@/lib/email/template";
 import { sendEmail } from "@/lib/email/resend";
-
-function authOk(req: Request): boolean {
-  const expected = process.env.CRON_SECRET?.trim();
-  if (!expected) {
-    // No CRON_SECRET configured -> refuse to run (don't let public traffic
-    // burn through OpenAI / Resend quota). Set CRON_SECRET in Vercel env to
-    // activate the worker.
-    return false;
-  }
-  const got = req.headers.get("authorization") ?? "";
-  return got === `Bearer ${expected}`;
-}
+import { bearerOk } from "@/lib/security/bearerAuth";
 
 function originFromReq(req: Request): string {
   const url = new URL(req.url);
@@ -51,7 +40,7 @@ function originFromReq(req: Request): string {
 }
 
 async function handle(req: Request): Promise<Response> {
-  if (!authOk(req)) {
+  if (!bearerOk(req)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
   const nowIso = new Date().toISOString();

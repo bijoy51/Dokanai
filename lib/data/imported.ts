@@ -37,16 +37,16 @@ export function clearImported(email: string): void {
   store.delete(norm(email));
 }
 
-// ---------- shared-KV persistence (session-persistent, not a real DB) ----------
+// ---------- durable persistence (via lib/kv.ts) ----------
 // The in-memory Map is per-instance and lost on a Vercel cold start, so the
-// dataset is ALSO written to the shared KV (one Python dict in the HF Space).
-// That KV survives Vercel cold starts and instance switches but does NOT
-// survive HF container restarts — so we additionally keep a browser-side
-// mirror in localStorage and DataSyncGuard (components/DataSyncGuard.tsx)
-// silently replays it back into the KV if the server wakes up empty.
-// hydrateImported() pulls the KV into the Map at the start of a request
-// (see the dashboard layout), which is what lets the synchronous getStore()
-// path find the data on any instance.
+// dataset is ALSO written through kvPut, which persists to Neon Postgres (the
+// durable source of truth; the legacy HF Space dict is only a read-only
+// lazy-migration fallback — see lib/kv.ts). As a belt-and-braces safeguard we
+// additionally keep a browser-side mirror in localStorage, and DataSyncGuard
+// (components/DataSyncGuard.tsx) silently replays it if a server read ever
+// comes back empty. hydrateImported() pulls the durable value into the Map at
+// the start of a request (see the dashboard layout), which is what lets the
+// synchronous getStore() path find the data on any instance.
 
 const kvKey = (email: string) => `dataset:${norm(email)}`;
 

@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DokanAI · Meet Rahim — 3D Scene</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,800;1,9..144,500;1,9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Hind+Siliguri:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #051611;
+    --bg-1: #0B2620;
+    --emerald: #10B981;
+    --emerald-glow: #34D399;
+    --gold: #F4C95D;
+    --cream: #F5EDD8;
+    --cream-bright: #FEFCF3;
+    --muted: #8DA89D;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+  body {
+    font-family: 'Inter Tight', sans-serif;
+    color: var(--cream);
+    user-select: none;
+    cursor: default;
+  }
+
+  /* 3D canvas full viewport */
+  #scene-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    background: radial-gradient(ellipse at 50% 50%, var(--bg-1) 0%, var(--bg-0) 80%);
+  }
+
+  /* Cinematic letterbox */
+  .letterbox {
+    position: fixed;
+    left: 0; right: 0;
+    height: 6%;
+    background: #000;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .letterbox.top { top: 0; }
+  .letterbox.bot { bottom: 0; }
+
+  /* Film grain */
+  .grain {
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 0.85 0 0 0 0.04 0'/></filter><rect width='300' height='300' filter='url(%23n)'/></svg>");
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    z-index: 11;
+    animation: grainShift 0.4s steps(4) infinite;
+  }
+  @keyframes grainShift {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-2%, 1%); }
+    50%  { transform: translate(1%, -2%); }
+    75%  { transform: translate(-1%, -1%); }
+  }
+
+  /* Vignette */
+  .vignette {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
+    z-index: 12;
+  }
+
+  /* Title overlay */
+  .title-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 24px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .title-overlay.show { opacity: 1; }
+  .title-overlay.fade { opacity: 0; transition-duration: 1s; }
+  .title-overlay .display-title {
+    transform: translateY(20px);
+    transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .title-overlay.show .display-title { transform: translateY(0); }
+  .title-overlay.fade .display-title { transform: translateY(-20px); }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--emerald-glow);
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 0;
+  }
+  .eyebrow::before,
+  .eyebrow::after {
+    content: '';
+    width: 32px;
+    height: 1px;
+    background: var(--emerald-glow);
+  }
+  .display-title {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(60px, 8vw, 120px);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--cream-bright);
+    font-variation-settings: "opsz" 144;
+  }
+  .display-title .dot { color: var(--gold); }
+
+  /* Character name tags - positioned over their 3D location */
+  .name-tag {
+    position: fixed;
+    z-index: 18;
+    pointer-events: none;
+    text-align: center;
+    opacity: 0;
+    transform: translate(-50%, 0) translateY(8px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+    background: rgba(5, 22, 17, 0.78);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(52, 211, 153, 0.35);
+    border-radius: 14px;
+    padding: 14px 22px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+  .name-tag.show {
+    opacity: 1;
+    transform: translate(-50%, 0) translateY(0);
+  }
+  .name-tag .role {
+    font-family: 'JetBrains Mono', 'Hind Siliguri', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .name-tag .name {
+    font-family: 'Fraunces', 'Noto Serif Bengali', serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: var(--cream-bright);
+    letter-spacing: -0.01em;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.1;
+  }
+  .name-tag .name::after {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: var(--emerald-glow);
+  }
+  .name-tag .meta {
+    font-family: 'Inter Tight', 'Hind Siliguri', sans-serif;
+    font-size: 0.85rem;
+    color: var(--emerald-glow);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+
+  /* Subtitle box */
+  .subtitle {
+    position: fixed;
+    bottom: 14%;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 20;
+    background: rgba(6, 21, 16, 0.75);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    border-radius: 4px;
+    padding: 18px 28px;
+    max-width: 70%;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .subtitle.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .subtitle::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 32px;
+    height: 1px;
+    background: var(--gold);
+  }
+  .subtitle .speaker {
+    font-family: 'JetBrains Mono', 'Hind Siliguri', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .subtitle .speaker.rep { color: var(--emerald-glow); }
+  .subtitle .text {
+    font-family: 'Fraunces', 'Noto Serif Bengali', serif;
+    font-size: clamp(20px, 2.2vw, 28px);
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--cream-bright);
+  }
+  .subtitle .text .em {
+    color: var(--gold);
+    font-weight: 600;
+  }
+  .subtitle .text .em-emerald {
+    color: var(--emerald-glow);
+    font-weight: 600;
+  }
+
+  /* DokanAI logo final card */
+  .logo-card {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    background: radial-gradient(ellipse at center, rgba(11, 38, 32, 0.4) 0%, transparent 80%);
+  }
+  .logo-card.show { opacity: 1; }
+  .logo-card .brand {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(72px, 12vw, 180px);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 0.9;
+    color: var(--cream-bright);
+    font-variation-settings: "opsz" 144;
+    text-shadow: 0 0 80px rgba(52, 211, 153, 0.4);
+  }
+  .logo-card .brand .ai {
+    color: var(--gold);
+    font-style: italic;
+  }
+  .logo-card .tagline {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--emerald-glow);
+    display: inline-flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .logo-card .tagline::before,
+  .logo-card .tagline::after {
+    content: '';
+    width: 40px;
+    height: 1px;
+    background: var(--emerald-glow);
+  }
+  .logo-card .closing {
+    margin-top: 12px;
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: clamp(20px, 2.2vw, 30px);
+    color: var(--cream);
+    max-width: 26em;
+    text-align: center;
+    line-height: 1.3;
+    padding: 0 6%;
+  }
+  .logo-card .closing .em { color: var(--gold); font-weight: 600; }
+
+  /* Progress bar */
+  .progress-track {
+    position: fixed;
+    bottom: 6%;
+    left: 0; right: 0;
+    height: 2px;
+    background: rgba(245, 237, 216, 0.06);
+    z-index: 30;
+    pointer-events: none;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--emerald-glow), var(--gold));
+    width: 0%;
+    box-shadow: 0 0 12px var(--emerald-glow);
+    transition: width 0.1s linear;
+  }
+
+  /* Loading indicator */
+  .loading {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--bg-0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    transition: opacity 0.6s ease;
+  }
+  .loading.hidden { opacity: 0; pointer-events: none; }
+  .loading .spinner {
+    width: 40px;
+    height: 40px;
+    border: 2px solid rgba(52, 211, 153, 0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Mobile / small-iframe scaling ────────────────────────────────────
+     The Three.js scene itself does NOT change here — the camera, lights,
+     characters, dialogue, and timing are untouched. Only the HTML overlay
+     (subtitle text, title card, name tags, end-card) is rescaled so it
+     stops covering the characters when the iframe is embedded at narrow
+     widths (phones). `vw` inside an iframe refers to the iframe's own
+     content viewport, so these media queries fire when the iframe is
+     embedded at narrow widths regardless of the parent page width. */
+  @media (max-width: 640px) {
+    .letterbox { height: 4%; }
+
+    .eyebrow {
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      gap: 8px;
+    }
+    .eyebrow::before, .eyebrow::after { width: 18px; }
+    .display-title { font-size: 40px; }
+
+    .name-tag {
+      padding: 6px 10px;
+      border-radius: 9px;
+    }
+    .name-tag .role {
+      font-size: 0.5rem;
+      letter-spacing: 0.18em;
+      margin-bottom: 3px;
+    }
+    .name-tag .name {
+      font-size: 0.95rem;
+      gap: 3px;
+    }
+    .name-tag .name::after { width: 16px; }
+
+    .subtitle {
+      bottom: 7%;
+      padding: 8px 12px;
+      max-width: 88%;
+    }
+    .subtitle .speaker {
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .subtitle .text {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .logo-card { gap: 14px; }
+    .logo-card .brand {
+      font-size: 52px;
+      text-shadow: 0 0 40px rgba(52, 211, 153, 0.4);
+    }
+    .logo-card .tagline {
+      font-size: 0.55rem;
+      letter-spacing: 0.3em;
+      gap: 10px;
+    }
+    .logo-card .tagline::before, .logo-card .tagline::after { width: 22px; }
+    .logo-card .closing {
+      font-size: 14px;
+      margin-top: 4px;
+      padding: 0 8%;
+    }
+
+    .loading .label { font-size: 0.55rem; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="scene-canvas"></canvas>
+
+<!-- Cinematic chrome -->
+<div class="letterbox top"></div>
+<div class="letterbox bot"></div>
+<div class="grain"></div>
+<div class="vignette"></div>
+
+<!-- Title overlay (Meet Rahim) -->
+<div class="title-overlay" id="title">
+  <div class="eyebrow">A DokanAI Story</div>
+  <h1 class="display-title">Meet Rahim<span class="dot">.</span></h1>
+</div>
+
+<!-- Character name tags -->
+<div class="name-tag" id="tagRahim" style="left: 28%; top: 70%;">
+  <div class="role">Shopkeeper</div>
+  <div class="name">রহিম</div>
+</div>
+<div class="name-tag" id="tagRep" style="left: 72%; top: 70%;">
+  <div class="role">DokanAI</div>
+  <div class="name">করিম</div>
+</div>
+
+<!-- Subtitle box -->
+<div class="subtitle" id="sub">
+  <div class="speaker" id="subSpeaker">রহিম</div>
+  <div class="text" id="subText"></div>
+</div>
+
+<!-- DokanAI final card -->
+<div class="logo-card" id="logoCard">
+  <h1 class="brand">Dokan<span class="ai">AI</span></h1>
+  <div class="tagline">Closing the gap</div>
+  <p class="closing">Business intelligence,<br>finally built for <span class="em">the ten million</span>.</p>
+</div>
+
+<!-- Progress bar -->
+<div class="progress-track">
+  <div class="progress-fill" id="progress"></div>
+</div>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="label">Loading 3D Scene</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+  'use strict';
+
+  // ===== Color palette =====
+  const PAL = {
+    bg: 0x051611,
+    bgFog: 0x0B2620,
+    emerald: 0x10B981,
+    emeraldGlow: 0x34D399,
+    gold: 0xF4C95D,
+    cream: 0xF5EDD8,
+    creamBright: 0xFEFCF3,
+    skinRahim: 0xC68A5B,
+    skinRep: 0xE0B894,
+    panjabi: 0xF5EDD8,
+    panjabiTrim: 0x064E3B,
+    repShirt: 0x10B981,
+    repTrouser: 0x1F2937,
+    rahimTrouser: 0x3D2817,
+    beard: 0x2A1810,
+    topi: 0xF5EDD8,
+    glasses: 0xF4C95D,
+    ground: 0x0A2018,
+  };
+
+  const canvas = document.getElementById('scene-canvas');
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true,
+    alpha: false,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(PAL.bg, 1);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(PAL.bgFog, 8, 28);
+
+  const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 3.0, 8.0);
+  camera.lookAt(0, 2.3, 0);
+
+  const hemi = new THREE.HemisphereLight(0x34D399, 0x051611, 0.5);
+  scene.add(hemi);
+
+  const key = new THREE.DirectionalLight(0xFAE6A8, 1.1);
+  key.position.set(5, 8, 4);
+  key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048);
+  key.shadow.camera.near = 0.5;
+  key.shadow.camera.far = 30;
+  key.shadow.camera.left = -8;
+  key.shadow.camera.right = 8;
+  key.shadow.camera.top = 8;
+  key.shadow.camera.bottom = -4;
+  key.shadow.bias = -0.0005;
+  scene.add(key);
+
+  const fill = new THREE.DirectionalLight(0x34D399, 0.5);
+  fill.position.set(-4, 5, 2);
+  scene.add(fill);
+
+  const rim = new THREE.DirectionalLight(0x10B981, 1.4);
+  rim.position.set(0, 4, -6);
+  scene.add(rim);
+
+  const goldPoint1 = new THREE.PointLight(0xF4C95D, 1.0, 12, 1.5);
+  goldPoint1.position.set(-3, 3, 4);
+  scene.add(goldPoint1);
+
+  const goldPoint2 = new THREE.PointLight(0xF4C95D, 0.6, 10, 1.5);
+  goldPoint2.position.set(3, 3, 4);
+  scene.add(goldPoint2);
+
+  const groundGeo = new THREE.PlaneGeometry(50, 50, 1, 1);
+  const groundMat = new THREE.MeshStandardMaterial({
+    color: PAL.ground,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  for (let i = 1; i <= 5; i++) {
+    const ringGeo = new THREE.RingGeometry(i * 1.2, i * 1.2 + 0.01, 64);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: PAL.emeraldGlow,
+      transparent: true,
+      opacity: 0.08 - i * 0.012,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.01;
+    scene.add(ring);
+  }
+
+  const particleCount = 80;
+  const partGeo = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * 20;
+    positions[i * 3 + 1] = Math.random() * 8 + 0.5;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 15 - 3;
+  }
+  partGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const partMat = new THREE.PointsMaterial({
+    color: PAL.emeraldGlow,
+    size: 0.06,
+    transparent: true,
+    opacity: 0.6,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+  const particles = new THREE.Points(partGeo, partMat);
+  scene.add(particles);
+
+  const pillarMat = new THREE.MeshStandardMaterial({
+    color: 0x0A2018,
+    roughness: 1.0,
+    metalness: 0
+  });
+  for (let i = 0; i < 6; i++) {
+    const h = 4 + Math.random() * 3;
+    const pillarGeo = new THREE.BoxGeometry(0.4, h, 0.4);
+    const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+    const angle = (i / 6) * Math.PI * 2;
+    pillar.position.set(Math.cos(angle) * 12, h / 2, Math.sin(angle) * 12 - 4);
+    pillar.castShadow = false;
+    scene.add(pillar);
+  }
+
+  function createCharacter(opts) {
+    const root = new THREE.Group();
+    root.position.copy(opts.position);
+    root.rotation.y = opts.facing || 0;
+
+    const skinMat = new THREE.MeshStandardMaterial({ color: opts.skinColor, roughness: 0.7, metalness: 0 });
+    const shirtMat = new THREE.MeshStandardMaterial({ color: opts.shirtColor, roughness: 0.7 });
+    const trouserMat = new THREE.MeshStandardMaterial({ color: opts.trouserColor, roughness: 0.8 });
+    const accentMat = new THREE.MeshStandardMaterial({ color: opts.accentColor || PAL.gold, roughness: 0.4, metalness: 0.3 });
+
+    const torsoGroup = new THREE.Group();
+    torsoGroup.position.y = 2.0;
+    root.add(torsoGroup);
+
+    const torsoGeo = new THREE.CylinderGeometry(0.42, 0.48, 1.1, 24);
+    const torso = new THREE.Mesh(torsoGeo, shirtMat);
+    torso.castShadow = true;
+    torsoGroup.add(torso);
+
+    const shoulderGeo = new THREE.BoxGeometry(0.9, 0.32, 0.42);
+    const shoulders = new THREE.Mesh(shoulderGeo, shirtMat);
+    shoulders.position.y = 0.65;
+    shoulders.castShadow = true;
+    torsoGroup.add(shoulders);
+
+    if (opts.type === 'rahim') {
+      const collarGeo = new THREE.BoxGeometry(0.04, 0.9, 0.05);
+      const collarMat = new THREE.MeshStandardMaterial({ color: PAL.panjabiTrim, roughness: 0.7 });
+      const collar = new THREE.Mesh(collarGeo, collarMat);
+      collar.position.set(0, 0.05, 0.43);
+      torsoGroup.add(collar);
+
+      for (let i = 0; i < 3; i++) {
+        const btnGeo = new THREE.SphereGeometry(0.045, 16, 16);
+        const btn = new THREE.Mesh(btnGeo, accentMat);
+        btn.position.set(0, 0.25 - i * 0.2, 0.46);
+        torsoGroup.add(btn);
+      }
+    } else {
+      const v1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.3, 0.05),
+        new THREE.MeshStandardMaterial({ color: PAL.cream, roughness: 0.5 }));
+      v1.position.set(-0.08, 0.45, 0.42);
+      v1.rotation.z = -0.3;
+      torsoGroup.add(v1);
+      const v2 = v1.clone();
+      v2.position.x = 0.08;
+      v2.rotation.z = 0.3;
+      torsoGroup.add(v2);
+
+      const badgeGeo = new THREE.BoxGeometry(0.22, 0.14, 0.02);
+      const badge = new THREE.Mesh(badgeGeo, accentMat);
+      badge.position.set(0.2, 0.15, 0.45);
+      torsoGroup.add(badge);
+    }
+
+    const hipsGeo = new THREE.BoxGeometry(0.7, 0.3, 0.45);
+    const hips = new THREE.Mesh(hipsGeo, trouserMat);
+    hips.position.y = 1.3;
+    hips.castShadow = true;
+    root.add(hips);
+
+    const legGeo = new THREE.CylinderGeometry(0.16, 0.13, 1.25, 16);
+    const leftLeg = new THREE.Mesh(legGeo, trouserMat);
+    leftLeg.position.set(-0.18, 0.65, 0);
+    leftLeg.castShadow = true;
+    root.add(leftLeg);
+    const rightLeg = new THREE.Mesh(legGeo, trouserMat);
+    rightLeg.position.set(0.18, 0.65, 0);
+    rightLeg.castShadow = true;
+    root.add(rightLeg);
+
+    const shoeGeo = new THREE.BoxGeometry(0.22, 0.1, 0.36);
+    const shoeMat = new THREE.MeshStandardMaterial({ color: 0x1A0F08, roughness: 0.4 });
+    const leftShoe = new THREE.Mesh(shoeGeo, shoeMat);
+    leftShoe.position.set(-0.18, 0.05, 0.05);
+    leftShoe.castShadow = true;
+    root.add(leftShoe);
+    const rightShoe = leftShoe.clone();
+    rightShoe.position.x = 0.18;
+    root.add(rightShoe);
+
+    const leftArmGroup = new THREE.Group();
+    leftArmGroup.position.set(-0.5, 0.55, 0);
+    torsoGroup.add(leftArmGroup);
+
+    const upperArmGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.55, 14);
+    const leftUpperArm = new THREE.Mesh(upperArmGeo, shirtMat);
+    leftUpperArm.position.y = -0.275;
+    leftUpperArm.castShadow = true;
+    leftArmGroup.add(leftUpperArm);
+
+    const leftElbow = new THREE.Group();
+    leftElbow.position.y = -0.55;
+    leftArmGroup.add(leftElbow);
+
+    const forearmGeo = new THREE.CylinderGeometry(0.08, 0.09, 0.5, 14);
+    const leftForearm = new THREE.Mesh(forearmGeo, skinMat);
+    leftForearm.position.y = -0.25;
+    leftForearm.castShadow = true;
+    leftElbow.add(leftForearm);
+
+    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), skinMat);
+    leftHand.position.y = -0.55;
+    leftHand.castShadow = true;
+    leftElbow.add(leftHand);
+
+    const rightArmGroup = new THREE.Group();
+    rightArmGroup.position.set(0.5, 0.55, 0);
+    torsoGroup.add(rightArmGroup);
+
+    const rightUpperArm = new THREE.Mesh(upperArmGeo, shirtMat);
+    rightUpperArm.position.y = -0.275;
+    rightUpperArm.castShadow = true;
+    rightArmGroup.add(rightUpperArm);
+
+    const rightElbow = new THREE.Group();
+    rightElbow.position.y = -0.55;
+    rightArmGroup.add(rightElbow);
+
+    const rightForearm = new THREE.Mesh(forearmGeo, skinMat);
+    rightForearm.position.y = -0.25;
+    rightForearm.castShadow = true;
+    rightElbow.add(rightForearm);
+
+    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), skinMat);
+    rightHand.position.y = -0.55;
+    rightHand.castShadow = true;
+    rightElbow.add(rightHand);
+
+    const headGroup = new THREE.Group();
+    headGroup.position.y = 0.95;
+    torsoGroup.add(headGroup);
+
+    const neckGeo = new THREE.CylinderGeometry(0.13, 0.15, 0.2, 14);
+    const neck = new THREE.Mesh(neckGeo, skinMat);
+    neck.position.y = -0.1;
+    neck.castShadow = true;
+    headGroup.add(neck);
+
+    const headGeo = new THREE.SphereGeometry(0.34, 32, 32);
+    const head = new THREE.Mesh(headGeo, skinMat);
+    head.scale.set(1, 1.1, 1);
+    head.position.y = 0.2;
+    head.castShadow = true;
+    headGroup.add(head);
+
+    const earGeo = new THREE.SphereGeometry(0.06, 12, 12);
+    const leftEar = new THREE.Mesh(earGeo, skinMat);
+    leftEar.position.set(-0.32, 0.2, 0);
+    leftEar.scale.set(0.6, 1, 0.5);
+    headGroup.add(leftEar);
+    const rightEar = leftEar.clone();
+    rightEar.position.x = 0.32;
+    headGroup.add(rightEar);
+
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.05, 16, 16);
+    const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, roughness: 0.3 });
+    const leftEye = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    leftEye.position.set(-0.11, 0.25, 0.27);
+    leftEye.scale.set(1, 0.7, 0.5);
+    headGroup.add(leftEye);
+    const rightEye = leftEye.clone();
+    rightEye.position.x = 0.11;
+    headGroup.add(rightEye);
+
+    const pupilGeo = new THREE.SphereGeometry(0.025, 12, 12);
+    const pupilMat = new THREE.MeshStandardMaterial({ color: 0x1A1A1A, roughness: 0.4 });
+    const leftPupil = new THREE.Mesh(pupilGeo, pupilMat);
+    leftPupil.position.set(-0.11, 0.25, 0.31);
+    headGroup.add(leftPupil);
+    const rightPupil = leftPupil.clone();
+    rightPupil.position.x = 0.11;
+    headGroup.add(rightPupil);
+
+    const browGeo = new THREE.BoxGeometry(0.1, 0.025, 0.02);
+    const browMat = new THREE.MeshStandardMaterial({ color: opts.hairColor || PAL.beard, roughness: 0.8 });
+    const leftBrow = new THREE.Mesh(browGeo, browMat);
+    leftBrow.position.set(-0.11, 0.34, 0.3);
+    leftBrow.rotation.z = 0.08;
+    headGroup.add(leftBrow);
+    const rightBrow = leftBrow.clone();
+    rightBrow.position.x = 0.11;
+    rightBrow.rotation.z = -0.08;
+    headGroup.add(rightBrow);
+
+    const noseGeo = new THREE.ConeGeometry(0.06, 0.14, 16);
+    const nose = new THREE.Mesh(noseGeo, skinMat);
+    nose.position.set(0, 0.2, 0.34);
+    nose.rotation.x = Math.PI / 2;
+    headGroup.add(nose);
+
+    const mouthOuter = new THREE.Group();
+    mouthOuter.position.set(0, 0.07, 0.3);
+    headGroup.add(mouthOuter);
+
+    const mouthGeo = new THREE.BoxGeometry(0.14, 0.04, 0.04);
+    const mouthDarkMat = new THREE.MeshStandardMaterial({ color: 0x3A1A12, roughness: 0.9 });
+    const mouth = new THREE.Mesh(mouthGeo, mouthDarkMat);
+    mouthOuter.add(mouth);
+    const lipGeo = new THREE.BoxGeometry(0.14, 0.02, 0.05);
+    const lipMat = new THREE.MeshStandardMaterial({ color: 0xB87060, roughness: 0.5 });
+    const upperLip = new THREE.Mesh(lipGeo, lipMat);
+    upperLip.position.y = 0.03;
+    mouthOuter.add(upperLip);
+    const lowerLip = new THREE.Mesh(lipGeo, lipMat);
+    lowerLip.position.y = -0.03;
+    mouthOuter.add(lowerLip);
+
+    if (opts.type === 'rahim') {
+      const beardMat = new THREE.MeshStandardMaterial({ color: PAL.beard, roughness: 0.95 });
+      const beardGeo = new THREE.SphereGeometry(0.35, 32, 32, 0, Math.PI * 2, Math.PI * 0.42, Math.PI * 0.35);
+      const beard = new THREE.Mesh(beardGeo, beardMat);
+      beard.position.y = 0.2;
+      beard.scale.set(1, 1.1, 1);
+      headGroup.add(beard);
+
+      const muGeo = new THREE.BoxGeometry(0.18, 0.04, 0.06);
+      const mustache = new THREE.Mesh(muGeo, beardMat);
+      mustache.position.set(0, 0.14, 0.32);
+      headGroup.add(mustache);
+
+      const topiMat = new THREE.MeshStandardMaterial({ color: PAL.topi, roughness: 0.7 });
+      const topiBaseGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.22, 32);
+      const topiBase = new THREE.Mesh(topiBaseGeo, topiMat);
+      topiBase.position.y = 0.5;
+      topiBase.castShadow = true;
+      headGroup.add(topiBase);
+
+      const topiTopGeo = new THREE.SphereGeometry(0.32, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.45);
+      const topiTop = new THREE.Mesh(topiTopGeo, topiMat);
+      topiTop.position.y = 0.6;
+      topiTop.castShadow = true;
+      headGroup.add(topiTop);
+
+      const trimGeo = new THREE.TorusGeometry(0.34, 0.012, 8, 32);
+      const trimMat = new THREE.MeshStandardMaterial({ color: PAL.emerald, roughness: 0.5, metalness: 0.4 });
+      const trim = new THREE.Mesh(trimGeo, trimMat);
+      trim.position.y = 0.4;
+      trim.rotation.x = Math.PI / 2;
+      headGroup.add(trim);
+    }
+
+    if (opts.type === 'rep') {
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0x1A0F08, roughness: 0.85 });
+      const hairGeo = new THREE.SphereGeometry(0.36, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.5);
+      const hair = new THREE.Mesh(hairGeo, hairMat);
+      hair.position.y = 0.28;
+      hair.scale.set(1, 0.9, 1);
+      hair.castShadow = true;
+      headGroup.add(hair);
+
+      const glassMat = new THREE.MeshStandardMaterial({ color: PAL.gold, roughness: 0.3, metalness: 0.6 });
+      const lensGeo = new THREE.TorusGeometry(0.07, 0.012, 8, 24);
+      const leftLens = new THREE.Mesh(lensGeo, glassMat);
+      leftLens.position.set(-0.11, 0.25, 0.32);
+      leftLens.scale.set(1, 0.85, 1);
+      headGroup.add(leftLens);
+      const rightLens = leftLens.clone();
+      rightLens.position.x = 0.11;
+      headGroup.add(rightLens);
+
+      const bridgeGeo = new THREE.BoxGeometry(0.06, 0.012, 0.012);
+      const bridge = new THREE.Mesh(bridgeGeo, glassMat);
+      bridge.position.set(0, 0.26, 0.33);
+      headGroup.add(bridge);
+
+      const tabletGroup = new THREE.Group();
+      const tabletGeo = new THREE.BoxGeometry(0.4, 0.28, 0.02);
+      const tabletMat = new THREE.MeshStandardMaterial({ color: 0x0A0A0A, roughness: 0.4 });
+      const tablet = new THREE.Mesh(tabletGeo, tabletMat);
+      tablet.castShadow = true;
+      tabletGroup.add(tablet);
+
+      const screenGeo = new THREE.PlaneGeometry(0.34, 0.22);
+      const screenMat = new THREE.MeshBasicMaterial({ color: PAL.emerald, transparent: true, opacity: 0.9 });
+      const screen = new THREE.Mesh(screenGeo, screenMat);
+      screen.position.z = 0.011;
+      tabletGroup.add(screen);
+
+      for (let i = 0; i < 4; i++) {
+        const barGeo = new THREE.PlaneGeometry(0.04, 0.04 + i * 0.025);
+        const barMat = new THREE.MeshBasicMaterial({ color: PAL.gold });
+        const bar = new THREE.Mesh(barGeo, barMat);
+        bar.position.set(-0.12 + i * 0.08, -0.04 + (0.04 + i * 0.025) / 2 - 0.04, 0.012);
+        tabletGroup.add(bar);
+      }
+
+      tabletGroup.position.set(-0.4, -0.55, 0.3);
+      tabletGroup.rotation.x = -0.3;
+      tabletGroup.rotation.z = 0.4;
+      leftElbow.add(tabletGroup);
+    }
+
+    return {
+      root,
+      torsoGroup,
+      headGroup,
+      leftArmGroup,
+      rightArmGroup,
+      leftElbow,
+      rightElbow,
+      mouthOuter,
+      head,
+      type: opts.type
+    };
+  }
+
+  const rahim = createCharacter({
+    type: 'rahim',
+    position: new THREE.Vector3(-1.6, 0, 0),
+    facing: Math.PI / 2.6,
+    skinColor: PAL.skinRahim,
+    shirtColor: PAL.panjabi,
+    trouserColor: PAL.rahimTrouser,
+    hairColor: PAL.beard,
+    accentColor: PAL.gold
+  });
+  scene.add(rahim.root);
+
+  const rep = createCharacter({
+    type: 'rep',
+    position: new THREE.Vector3(1.6, 0, 0),
+    facing: -Math.PI / 2.6,
+    skinColor: PAL.skinRep,
+    shirtColor: PAL.repShirt,
+    trouserColor: PAL.repTrouser,
+    hairColor: 0x1A0F08,
+    accentColor: PAL.cream
+  });
+  scene.add(rep.root);
+
+  rahim.leftArmGroup.rotation.x = 0.1;
+  rahim.rightArmGroup.rotation.x = 0.1;
+  rep.leftArmGroup.rotation.x = -0.3;
+  rep.leftElbow.rotation.x = -1.2;
+  rep.rightArmGroup.rotation.x = 0.1;
+
+  const TOTAL = 31000;
+
+  const DIALOGUE = [
+    { start: 3000,  end: 9000,  speaker: 'rahim', label: 'রহিম · দোকানদার',
+      text: 'এদের আগে <span class="em">কী স্টক করব</span> বুঝি না। পুরনো কাস্টমাররা কেন আসা বন্ধ করে, কিছু বুঝি না।' },
+    { start: 9500,  end: 16000, speaker: 'rep',   label: 'করিম · DokanAI',
+      text: 'আমাদের <span class="em-emerald">DokanAI</span> আপনার প্রতিদিনের ব্যবসা থেকে <span class="em-emerald">পরিষ্কার তথ্য</span> দেবে। অনুমান করে আর চলতে হবে না।' },
+    { start: 16500, end: 21000, speaker: 'rahim', label: 'রহিম',
+      text: 'এটা আমার মতো <span class="em">ছোট দোকানের</span> জন্যও কাজ করবে?' },
+    { start: 21300, end: 25000, speaker: 'rep',   label: 'করিম',
+      text: '<span class="em-emerald">১ কোটি</span> দোকানদারের জন্যই বানানো। আপনার মতো মানুষদের কথা ভেবেই।' },
+  ];
+
+  const titleEl = document.getElementById('title');
+  const subEl = document.getElementById('sub');
+  const subTextEl = document.getElementById('subText');
+  const subSpeakerEl = document.getElementById('subSpeaker');
+  const tagRahim = document.getElementById('tagRahim');
+  const tagRep = document.getElementById('tagRep');
+  const logoCard = document.getElementById('logoCard');
+  const loadingEl = document.getElementById('loading');
+  const progressEl = document.getElementById('progress');
+
+  let startTime = null;
+  let currentDialogueIdx = -1;
+
+  let camLookX = 0, camLookY = 2.3, camLookZ = 0;
+
+  function updateOverlays(t) {
+    if (t > 500 && t < 2800) {
+      titleEl.classList.add('show');
+      titleEl.classList.remove('fade');
+    } else if (t >= 2800 && t < 3800) {
+      titleEl.classList.remove('show');
+      titleEl.classList.add('fade');
+    } else {
+      titleEl.classList.remove('show');
+      titleEl.classList.remove('fade');
+    }
+
+    if (t > 1500 && t < 3500) {
+      tagRahim.classList.add('show');
+      tagRep.classList.add('show');
+    } else {
+      tagRahim.classList.remove('show');
+      tagRep.classList.remove('show');
+    }
+
+    let activeIdx = -1;
+    for (let i = 0; i < DIALOGUE.length; i++) {
+      if (t >= DIALOGUE[i].start && t <= DIALOGUE[i].end) {
+        activeIdx = i;
+        break;
+      }
+    }
+    if (activeIdx !== currentDialogueIdx) {
+      if (activeIdx >= 0) {
+        const d = DIALOGUE[activeIdx];
+        subTextEl.innerHTML = d.text;
+        subSpeakerEl.textContent = d.label;
+        subSpeakerEl.className = 'speaker' + (d.speaker === 'rep' ? ' rep' : '');
+        subEl.classList.add('show');
+      } else {
+        subEl.classList.remove('show');
+      }
+      currentDialogueIdx = activeIdx;
+    }
+
+    if (t > 26500) {
+      logoCard.classList.add('show');
+    } else {
+      logoCard.classList.remove('show');
+    }
+
+    progressEl.style.width = Math.min((t / TOTAL) * 100, 100) + '%';
+  }
+
+  function currentSpeaker(t) {
+    for (let i = 0; i < DIALOGUE.length; i++) {
+      if (t >= DIALOGUE[i].start && t <= DIALOGUE[i].end) return DIALOGUE[i].speaker;
+    }
+    return null;
+  }
+
+  function animate(now) {
+    if (startTime == null) startTime = now;
+    const t = now - startTime;
+    const ts = t / 1000;
+
+    if (t > TOTAL + 3000) {
+      startTime = now;
+      currentDialogueIdx = -1;
+    }
+
+    updateOverlays(t);
+
+    const breathe = Math.sin(ts * 1.8) * 0.012;
+    rahim.torsoGroup.scale.y = 1 + breathe;
+    rep.torsoGroup.scale.y = 1 + breathe * 0.8;
+
+    rahim.headGroup.rotation.y = Math.sin(ts * 0.6) * 0.04 - 0.08;
+    rep.headGroup.rotation.y = Math.sin(ts * 0.7 + 1) * 0.04 + 0.08;
+
+    rahim.headGroup.rotation.x = Math.sin(ts * 0.9) * 0.025;
+    rep.headGroup.rotation.x = Math.sin(ts * 1.1 + 0.5) * 0.02;
+
+    const speaker = currentSpeaker(t);
+    if (speaker === 'rahim') {
+      const mouthOpen = Math.abs(Math.sin(ts * 14)) * 0.18 + Math.abs(Math.sin(ts * 9)) * 0.12;
+      rahim.mouthOuter.scale.y = 1 + mouthOpen * 3;
+      rahim.mouthOuter.position.y = 0.07 - mouthOpen * 0.04;
+      rep.mouthOuter.scale.y = 1;
+      const armSwing = Math.sin(ts * 2.5) * 0.35;
+      rahim.leftArmGroup.rotation.x = -0.5 + armSwing * 0.3;
+      rahim.leftArmGroup.rotation.z = 0.2 + armSwing * 0.2;
+      rahim.leftElbow.rotation.x = -1.2 + Math.sin(ts * 3) * 0.2;
+
+      rahim.rightArmGroup.rotation.x = -0.4 + Math.sin(ts * 2.2 + 1) * 0.3;
+      rahim.rightArmGroup.rotation.z = -0.2 - Math.sin(ts * 2.2 + 1) * 0.15;
+      rahim.rightElbow.rotation.x = -1.1 + Math.sin(ts * 2.8 + 0.5) * 0.2;
+
+      rep.headGroup.rotation.x += Math.sin(ts * 1.5) * 0.05;
+    } else if (speaker === 'rep') {
+      const mouthOpen = Math.abs(Math.sin(ts * 13)) * 0.16 + Math.abs(Math.sin(ts * 8.5)) * 0.1;
+      rep.mouthOuter.scale.y = 1 + mouthOpen * 3;
+      rep.mouthOuter.position.y = 0.07 - mouthOpen * 0.04;
+      rahim.mouthOuter.scale.y = 1;
+
+      rep.leftArmGroup.rotation.x = -0.3 + Math.sin(ts * 1.2) * 0.08;
+      rep.leftElbow.rotation.x = -1.2;
+
+      rep.rightArmGroup.rotation.x = -0.6 + Math.sin(ts * 2.3) * 0.4;
+      rep.rightArmGroup.rotation.z = -0.3 + Math.sin(ts * 2) * 0.15;
+      rep.rightElbow.rotation.x = -1.0 + Math.sin(ts * 2.5) * 0.25;
+
+      rahim.headGroup.rotation.x += Math.sin(ts * 1.3 + 0.5) * 0.06;
+      rahim.leftArmGroup.rotation.x = 0.05 + Math.sin(ts * 0.8) * 0.04;
+      rahim.leftElbow.rotation.x = -0.2;
+      rahim.rightArmGroup.rotation.x = 0.05 + Math.sin(ts * 0.9) * 0.04;
+      rahim.rightElbow.rotation.x = -0.2;
+    } else {
+      rahim.mouthOuter.scale.y += (1 - rahim.mouthOuter.scale.y) * 0.2;
+      rep.mouthOuter.scale.y += (1 - rep.mouthOuter.scale.y) * 0.2;
+      rahim.leftArmGroup.rotation.x = 0.05 + Math.sin(ts * 0.8) * 0.03;
+      rahim.rightArmGroup.rotation.x = 0.05 + Math.sin(ts * 0.9 + 1) * 0.03;
+      rep.rightArmGroup.rotation.x = 0.05 + Math.sin(ts * 0.7 + 0.5) * 0.03;
+    }
+
+    let targetPos, targetLook;
+    if (ts < 2.5) {
+      targetPos = [0, 3.0, 8.5];
+      targetLook = [0, 2.3, 0];
+    } else if (ts < 9) {
+      targetPos = [-0.3, 2.65, 5.6];
+      targetLook = [-1.6, 2.4, 0];
+    } else if (ts < 16) {
+      targetPos = [0.3, 2.65, 5.6];
+      targetLook = [1.6, 2.4, 0];
+    } else if (ts < 21) {
+      targetPos = [-0.3, 2.65, 5.6];
+      targetLook = [-1.6, 2.4, 0];
+    } else if (ts < 25.5) {
+      targetPos = [0.3, 2.65, 5.6];
+      targetLook = [1.6, 2.4, 0];
+    } else {
+      targetPos = [0, 3.2, 10.0];
+      targetLook = [0, 2.4, 0];
+    }
+
+    const lerpF = (ts >= 25.5) ? 0.045 : 0.075;
+    camera.position.x += (targetPos[0] - camera.position.x) * lerpF;
+    camera.position.y += (targetPos[1] - camera.position.y) * lerpF;
+    camera.position.z += (targetPos[2] - camera.position.z) * lerpF;
+    camLookX += (targetLook[0] - camLookX) * lerpF;
+    camLookY += (targetLook[1] - camLookY) * lerpF;
+    camLookZ += (targetLook[2] - camLookZ) * lerpF;
+    camera.lookAt(camLookX, camLookY, camLookZ);
+
+    const pp = particles.geometry.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+      pp[i * 3 + 1] += 0.003 + Math.sin(ts + i) * 0.0005;
+      if (pp[i * 3 + 1] > 9) pp[i * 3 + 1] = 0.5;
+    }
+    particles.geometry.attributes.position.needsUpdate = true;
+
+    particles.rotation.y += 0.0005;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  setTimeout(() => {
+    loadingEl.classList.add('hidden');
+    requestAnimationFrame(animate);
+  }, 600);
+
+})();
+</script>
+
+</body>
+</html>

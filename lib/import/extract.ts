@@ -260,3 +260,61 @@ export async function extractFromPdf(pdfBytes: Uint8Array): Promise<Extracted> {
     },
   ]);
 }
+
+/**
+ * Extract products + sales from two PDFs that the user *thinks* are split
+ * by purpose ("this is my products PDF, this is my sales PDF"). In
+ * practice ledger PDFs from real shops are messy and may mix both — the
+ * model is already instructed to classify each row as product vs sale
+ * regardless of where it was found, so the labels are a hint, not a
+ * constraint. If the user swaps the two, extraction still works.
+ *
+ * Either source may be omitted (e.g. user only has a sales PDF), in
+ * which case we just fall back to the single-PDF path on whichever
+ * survived.
+ *
+ * Per-file 50k char cap mirrors the single-PDF path so combined token
+ * cost stays bounded. The combined text is sent in ONE model call so the
+ * model can de-duplicate names referenced across both PDFs.
+ */
+export async function extractFromMultiplePdfs(
+  sources: Array<{ label: string; bytes: Uint8Array }>,
+): Promise<Extracted> {
+  const usable = sources.filter((s) => s.bytes.byteLength > 0);
+  if (usable.length === 0) throw new Error("No PDFs to extract.");
+  if (usable.length === 1) return extractFromPdf(usable[0].bytes);
+
+  const { extractText } = await import("unpdf");
+  const blocks: string[] = [];
+  for (const src of usable) {
+    const result = await extractText(new Uint8Array(src.bytes), { mergePages: true });
+    const raw = (Array.isArray(result.text) ? result.text.join("\n") : result.text || "").trim();
+    if (raw.length < 20) {
+      // Don't fail the whole upload if one of two PDFs is image-only;
+      // just note it and continue with whatever did extract.
+      blocks.push(
+        `--- ${src.label} (no selectable text — likely scanned, skipped) ---`,
+      );
+      continue;
+    }
+    blocks.push(
+      `--- ${src.label} TEXT START ---\n${raw.slice(0, 50_000)}\n--- ${src.label} TEXT END ---`,
+    );
+  }
+
+  if (blocks.every((b) => b.includes("no selectable text"))) {
+    throw new Error(
+      "Couldn't read any text from the PDFs — they may be scanned images. Try uploading the pages as Photos instead.",
+    );
+  }
+
+  return callOpenAI([
+    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "user",
+      content:
+        "Below is the text extracted from two PDFs the shopkeeper uploaded. They told us one is meant to be the PRODUCT CATALOGUE and the other is meant to be the SALES LEDGER, but in real shop records the split is rarely clean — treat the labels as hints only. Read both, classify every distinct catalogue item as a product, every individual transaction as a sale, and de-duplicate product names across the two sources. Output ONE merged JSON object per the schema.\n\n" +
+        blocks.join("\n\n"),
+    },
+  ]);
+}

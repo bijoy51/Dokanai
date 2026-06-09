@@ -78,14 +78,15 @@ export function DashboardShell({
 
         {/* Sidebar:
               - <lg: fixed drawer that slides in from the left.
-              - lg+:  sticky pinned to top:0, height = viewport, so it stays
-                      in place while the main content scrolls. `self-start`
-                      stops flex from stretching the aside to the full
-                      flex-container height (which would defeat sticky). */}
+              - lg+:  truly fixed at the left edge, always 100vh tall — it
+                      never scrolls with the page, regardless of how long
+                      the main content gets. The main column gets a
+                      matching `lg:ml-64` so its content doesn't slide
+                      under the sidebar. */}
         <aside
           className={
-            "fixed lg:sticky top-0 left-0 z-50 lg:z-auto " +
-            "h-full lg:h-screen lg:top-0 lg:self-start " +
+            "fixed top-0 left-0 z-50 lg:z-30 " +
+            "h-full lg:h-screen " +
             "w-72 sm:w-64 lg:w-64 bg-white border-r border-slate-200 " +
             "transform transition-transform duration-200 ease-out lg:transform-none " +
             "flex flex-col " +
@@ -136,7 +137,11 @@ export function DashboardShell({
           </div>
         </aside>
 
-        <div className="flex-1 min-w-0">
+        {/* Main column. lg:ml-64 leaves room for the fixed sidebar so
+            the content never slides under it. min-w-0 lets long tables /
+            wide charts shrink inside this flex item instead of pushing
+            the document wide. */}
+        <div className="flex-1 min-w-0 lg:ml-64">
           {/* Desktop top bar (hidden on mobile — mobile has its own bar above) */}
           <div className="hidden lg:flex px-4 sm:px-6 py-3 border-b border-slate-200 bg-white items-center justify-between gap-3">
             <div className="text-sm text-slate-500 truncate">

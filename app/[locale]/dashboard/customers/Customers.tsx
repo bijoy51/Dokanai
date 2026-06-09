@@ -2,8 +2,10 @@ import { rfmScores, segmentBreakdown } from "@/lib/ai/churn";
 import { t, type Locale } from "@/lib/i18n/messages";
 import { formatBDT, formatNumber } from "@/lib/utils";
 import { Crown, HeartHandshake, AlertTriangle, Moon, Sparkles } from "lucide-react";
-import { isShopEmpty } from "@/lib/data/store";
+import { getStore, isShopEmpty } from "@/lib/data/store";
 import { NoDataState } from "@/components/NoDataState";
+import { getSession } from "@/lib/auth";
+import { CustomersTable, type CustomersTableRow } from "./CustomersTable";
 
 const segIcon = {
   vip: Crown,
@@ -26,14 +28,26 @@ export default function CustomersPage({ params }: { params: { locale: string } }
   if (isShopEmpty()) return <NoDataState locale={locale} />;
   const all = rfmScores();
   const summary = segmentBreakdown();
-  const top = all.slice(0, 30);
+  const store = getStore();
 
-  const actionFor = (seg: string) =>
-    seg === "atrisk" || seg === "dormant"
-      ? "coupon"
-      : seg === "vip"
-        ? "thank"
-        : "upsell";
+  // Join the RFM score rows with the underlying customer record so the
+  // client table has the email field (RFM CustomerScore drops it). This is
+  // cheaper than passing the whole store down — we only need name + email.
+  const rows: CustomersTableRow[] = all.slice(0, 30).map((c) => {
+    const cust = store.customerById(c.customerId);
+    return {
+      customerId: c.customerId,
+      name: c.name,
+      email: cust?.email ?? "",
+      city: c.city,
+      segment: c.segment,
+      recency: c.recency,
+      frequency: c.frequency,
+      monetary: c.monetary,
+    };
+  });
+
+  const shopOwnerEmail = getSession()?.email ?? "";
 
   return (
     <div>
@@ -62,47 +76,7 @@ export default function CustomersPage({ params }: { params: { locale: string } }
         <div className="px-4 py-3 border-b border-slate-200 text-sm font-medium">
           Top customers (RFM scored)
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600 text-xs uppercase">
-              <tr>
-                <th className="text-left px-4 py-2">{t("ch.col.name", locale)}</th>
-                <th className="text-left px-4 py-2">{t("ch.col.segment", locale)}</th>
-                <th className="text-right px-4 py-2">{t("ch.col.recency", locale)}</th>
-                <th className="text-right px-4 py-2">{t("ch.col.freq", locale)}</th>
-                <th className="text-right px-4 py-2">{t("ch.col.spent", locale)}</th>
-                <th className="text-left px-4 py-2">{t("ch.col.action", locale)}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {top.map((c) => {
-                const Icon = segIcon[c.segment];
-                return (
-                  <tr key={c.customerId} className="border-t border-slate-100">
-                    <td className="px-4 py-2">
-                      <div className="font-medium">{c.name}</div>
-                      <div className="text-[11px] text-slate-500">{c.city}</div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded border ${segStyle[c.segment]}`}>
-                        <Icon className="w-3 h-3" />
-                        {t(`ch.seg.${c.segment}`, locale)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right">{c.recency}d</td>
-                    <td className="px-4 py-2 text-right">{c.frequency}</td>
-                    <td className="px-4 py-2 text-right">{formatBDT(c.monetary)}</td>
-                    <td className="px-4 py-2">
-                      <button className="text-xs px-2 py-1 rounded border border-slate-200 hover:bg-slate-50">
-                        {t(`ch.action.${actionFor(c.segment)}`, locale)}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <CustomersTable rows={rows} locale={locale} shopOwnerEmail={shopOwnerEmail} />
       </section>
     </div>
   );

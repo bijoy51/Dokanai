@@ -52,6 +52,7 @@ const CAPABILITIES: Array<{ icon: LucideIcon; title: string; desc: string; href:
   { icon: UploadCloud, title: "nav.onboarding", desc: "home.d.onboarding", href: "/dashboard/onboarding" },
   { icon: Code2, title: "nav.developer", desc: "home.d.developer", href: "/dashboard/developer" },
   { icon: History, title: "nav.uploads", desc: "home.d.uploads", href: "/dashboard/uploads" },
+  { icon: Smartphone, title: "nav.install", desc: "home.d.install", href: "/dashboard/install" },
 ];
 
 const STATS = ["home.stat1", "home.stat2", "home.stat3", "home.stat4"] as const;
@@ -81,6 +82,12 @@ export default function Home({ params }: { params: { locale: string } }) {
             <span className="text-xs text-slate-500 hidden sm:inline truncate">· {t("brand.tagline", locale)}</span>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+            <Link
+              href={`/${locale}/pricing`}
+              className="text-xs sm:text-sm text-slate-600 hover:text-brand-700 hover:underline"
+            >
+              {t("plans.nav", locale)}
+            </Link>
             {session && (
               <>
                 <span className="text-xs text-slate-500 hidden md:inline">
@@ -103,16 +110,20 @@ export default function Home({ params }: { params: { locale: string } }) {
           <div className="anim-blob absolute top-40 left-1/3 w-64 h-64 rounded-full bg-teal-200/40 blur-3xl" style={{ animationDelay: "-12s" }} />
         </div>
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-14 pb-10 sm:pb-20 grid lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 items-center">
-          {/* copy column */}
-          <div className="anim-fade-up text-center lg:text-left">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/70 backdrop-blur px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-medium text-brand-700">
-              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> {t("home.badge", locale)}
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-5 sm:pt-14 pb-8 sm:pb-20 grid lg:grid-cols-2 gap-6 sm:gap-10 lg:gap-12 items-center">
+          {/* copy column. min-w-0 lets the grid item actually shrink below
+              its min-content size on narrow phones (otherwise the long
+              English headline / long Bangla chip strings can keep the cell
+              wider than the viewport and trigger horizontal overflow). */}
+          <div className="anim-fade-up text-center lg:text-left min-w-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-white/70 backdrop-blur px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-medium text-brand-700 max-w-full">
+              <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+              <span className="truncate">{t("home.badge", locale)}</span>
             </span>
-            <h1 className="mt-3 sm:mt-4 text-[26px] leading-tight sm:text-4xl md:text-5xl font-bold tracking-tight">
+            <h1 className="mt-3 sm:mt-4 text-[22px] sm:text-4xl md:text-5xl leading-tight font-bold tracking-tight break-words">
               {t("landing.headline", locale)}
             </h1>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            <p className="mt-3 sm:mt-4 text-[13px] sm:text-lg text-slate-600 max-w-xl mx-auto lg:mx-0 leading-relaxed">
               {t("landing.sub", locale)}
             </p>
 
@@ -120,7 +131,7 @@ export default function Home({ params }: { params: { locale: string } }) {
               {session ? (
                 <Link
                   href={`/${locale}/dashboard`}
-                  className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
+                  className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
                 >
                   {t("landing.enter", locale)} <ArrowRight className="w-4 h-4" />
                 </Link>
@@ -128,13 +139,13 @@ export default function Home({ params }: { params: { locale: string } }) {
                 <>
                   <Link
                     href={`/${locale}/signup`}
-                    className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
+                    className="inline-flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
                   >
                     <UserPlus className="w-4 h-4" /> {t("auth.signupCta", locale)}
                   </Link>
                   <Link
                     href={`/${locale}/login`}
-                    className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-5 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
+                    className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium shadow-sm transition-transform motion-safe:hover:scale-[1.03] text-sm sm:text-base"
                   >
                     <LogIn className="w-4 h-4" /> {t("auth.loginCta", locale)}
                   </Link>
@@ -142,27 +153,60 @@ export default function Home({ params }: { params: { locale: string } }) {
               )}
               <a
                 href="#features"
-                className="inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium text-brand-700 hover:text-brand-800 hover:underline text-sm sm:text-base"
+                className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-md font-medium text-brand-700 hover:text-brand-800 hover:underline text-sm sm:text-base"
               >
                 {t("home.hero.explore", locale)} <ArrowRight className="w-4 h-4" />
               </a>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs">
+            <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center lg:justify-start gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
               {["home.hero.tag.live", "home.hero.tag.bn", "home.hero.tag.offline"].map((k) => (
-                <span key={k} className="inline-flex items-center gap-1 rounded-full bg-white/70 border border-slate-200 px-2.5 py-1 text-slate-600">
-                  <Check className="w-3 h-3 text-brand-600" /> {t(k, locale)}
+                <span key={k} className="inline-flex items-center gap-1 rounded-full bg-white/70 border border-slate-200 px-2 sm:px-2.5 py-0.5 sm:py-1 text-slate-600">
+                  <Check className="w-3 h-3 text-brand-600 shrink-0" /> {t(k, locale)}
                 </span>
               ))}
             </div>
-            {!session && <p className="mt-4 text-xs text-slate-400">{t("auth.gateNote", locale)}</p>}
+            {!session && <p className="mt-4 text-[11px] sm:text-xs text-slate-400">{t("auth.gateNote", locale)}</p>}
           </div>
 
-          {/* graphical animated dashboard preview */}
-          <div className="anim-fade-up" style={{ animationDelay: "120ms" }}>
+          {/* graphical animated dashboard preview. min-w-0 mirrors the copy
+              column so a wide HeroPreview can't push the grid track wider
+              than the viewport on phones. */}
+          <div className="anim-fade-up min-w-0" style={{ animationDelay: "120ms" }}>
             <HeroPreview locale={locale} />
           </div>
         </div>
+      </section>
+
+      {/* ── 3D story scene ─────────────────────────────────────────────────
+          Self-contained Three.js scene served from /public/meet-rahim.html.
+          Iframed so its globally-scoped CSS + Three.js shim never collide
+          with the React app's Tailwind tree. Lazy-loaded so visitors who
+          never scroll past the fold don't pay the Three.js download. */}
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16">
+        <Reveal className="text-center max-w-2xl mx-auto">
+          <SectionKicker>{t("home.story.kicker", locale)}</SectionKicker>
+          <h2 className="mt-2 text-xl sm:text-3xl font-bold tracking-tight">{t("home.story.title", locale)}</h2>
+          <p className="mt-2 sm:mt-3 text-sm sm:text-base text-slate-600 leading-relaxed">{t("home.story.sub", locale)}</p>
+        </Reveal>
+        <Reveal delay={120}>
+          <div className="mt-6 sm:mt-8 relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden rounded-2xl border border-slate-900/10 bg-[#051611] shadow-xl">
+            <iframe
+              src="/meet-rahim.html"
+              title="DokanAI · Meet Rahim — 3D scene"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              // Scripts on, but NOT allow-same-origin — the combination of
+              // both with content served from the same origin lets the
+              // iframe escape the sandbox. The 3D scene only fetches
+              // Three.js from a CDN and Google Fonts (both cross-origin
+              // and unaffected by the sandbox), so dropping same-origin
+              // costs nothing visually and shuts a real escape vector.
+              sandbox="allow-scripts"
+              className="absolute inset-0 h-full w-full border-0"
+            />
+          </div>
+        </Reveal>
       </section>
 
       {/* ── Stats strip ────────────────────────────────────────────────── */}

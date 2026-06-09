@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAccessTokenFor, clearConnection } from "@/lib/google/oauth";
 import { getBinding, listBoundEmails } from "@/lib/sheetSync/store";
 import { runSheetSync } from "@/lib/sheetSync/runSync";
+import { bearerOk } from "@/lib/security/bearerAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +23,8 @@ export const dynamic = "force-dynamic";
  * 5-min cadence comfortably scales to a few hundred shops.
  */
 
-function authOk(req: Request): boolean {
-  const expected = process.env.CRON_SECRET?.trim();
-  if (!expected) return false;
-  return req.headers.get("authorization") === `Bearer ${expected}`;
-}
-
 async function handle(req: Request): Promise<Response> {
-  if (!authOk(req)) {
+  if (!bearerOk(req)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 

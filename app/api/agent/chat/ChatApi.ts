@@ -9,6 +9,15 @@ import {
   type Chat,
   type ChatMessage,
 } from "@/lib/agent/store";
+import { consumeQuota, rateLimitHeaders } from "@/lib/security/rateLimit";
+
+// Two-layer per-account ceiling on Pilot turns. The minute bucket stops
+// a tight client-loop from burning OpenAI quota; the hourly bucket caps
+// total per-account spend over a longer horizon. Numbers picked to be
+// well above human-pace conversational use (you're not chatting 15
+// times in a minute) but tight enough that a runaway script is bounded.
+const CHAT_LIMIT_PER_MIN = 15;
+const CHAT_LIMIT_PER_HOUR = 200;
 
 /**
  * POST /api/agent/chat
@@ -23,6 +32,23 @@ import {
 export async function POST(req: Request) {
   const session = getSession();
   if (!session) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+
+  // Check the minute window first — it trips fast on tight loops and
+  // saves an hourly KV read on the common abuse path.
+  const minute = await consumeQuota("pilot-chat-min", session.email, CHAT_LIMIT_PER_MIN, 60);
+  if (!minute.ok) {
+    return NextResponse.json(
+      { error: "You're sending messages very quickly. Please wait a moment and try again." },
+      { status: 429, headers: rateLimitHeaders(minute, CHAT_LIMIT_PER_MIN) },
+    );
+  }
+  const hour = await consumeQuota("pilot-chat-hour", session.email, CHAT_LIMIT_PER_HOUR, 60 * 60);
+  if (!hour.ok) {
+    return NextResponse.json(
+      { error: "Hourly Pilot usage limit reached. Try again in a bit." },
+      { status: 429, headers: rateLimitHeaders(hour, CHAT_LIMIT_PER_HOUR) },
+    );
+  }
 
   let body: { chatId?: string; message?: string };
   try {

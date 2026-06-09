@@ -7,7 +7,33 @@ import { cookies } from "next/headers";
  * provider (NextAuth / Clerk / Supabase) and a user database.
  */
 
-const SECRET = process.env.AUTH_SECRET || "dokanai-dev-secret-change-in-production";
+/**
+ * Resolve the HMAC secret.
+ *
+ *   - In development we tolerate a missing env var and fall back to a
+ *     well-known placeholder so `npm run dev` Just Works on a fresh
+ *     checkout. The placeholder is harmless locally — no one is reading
+ *     dev cookies.
+ *
+ *   - In production we refuse to start up if AUTH_SECRET is missing.
+ *     The previous behaviour (silently fall back to the placeholder)
+ *     meant every session token on a misconfigured deploy was signed
+ *     with a literal string anyone with the repo could see — a forgery
+ *     vector that lets any visitor mint a session for any email.
+ *     Failing closed is the only safe default.
+ */
+function resolveSecret(): string {
+  const fromEnv = process.env.AUTH_SECRET?.trim();
+  if (fromEnv) return fromEnv;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "AUTH_SECRET is required in production. Set it to a strong random value (e.g. `openssl rand -hex 32`) on Vercel and redeploy.",
+    );
+  }
+  return "dokanai-dev-secret-change-in-production";
+}
+
+const SECRET = resolveSecret();
 export const SESSION_COOKIE = "dokanai_session";
 // 1-year persistent session. Bumped from 30 days so users who install
 // the PWA on their phone effectively never re-authenticate until they

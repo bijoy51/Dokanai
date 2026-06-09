@@ -188,21 +188,9 @@
 
 ## 9A. NRB Advisor & Global Advisory
 
-Per BuildFest Section C, the team includes a Non-Resident Bangladeshi (NRB) e-commerce / AI advisor whose remote contribution is documented below. The verification step before commit greps for `FILL:` tokens; any leftover placeholder blocks the commit.
+BuildFest Section C invites a Non-Resident Bangladeshi (NRB) e-commerce / AI advisor on the team. As of this submission we have **not yet secured a confirmed NRB advisor**, so this section deliberately makes no claim of one. We would rather leave the seat honestly open than document an advisor we cannot verify.
 
-<!-- FILL-NRB-ADVISOR: replace the four FILL lines with the advisor's real attributes. The verification step before commit MUST find zero `FILL:` lines in this file. -->
-
-```
-NRB Advisor:
-  FILL: Name         — <full name>
-  FILL: Location     — <city, country>
-  FILL: Role         — <e-commerce / AI position and organisation>
-  FILL: Contribution — <how they have advised the DokanAI team>
-```
-
-**Engagement cadence:** <!-- FILL-NRB-CADENCE: e.g. "Bi-weekly product reviews on Zoom + one architecture deep-dive in May 2026." -->
-
-**Why this matters for scoring.** Section C requires the NRB seat to be both *filled* and *documented*; this section is the documentation, not an aspirational note. It is also what grounds the Global Scalability Story in §10 — that section's emerging-markets claim is mentored by the same advisor, so the international reach is not pitch-deck assertion but a real channel.
+Our global-readiness thinking in §10 therefore rests on the team's own market research into festival-driven, COD-heavy, mobile-first economies — not on advisor mentorship. If we onboard an NRB advisor before judging, their real name, location, role and concrete contributions will be documented here and nowhere assumed until then.
 
 ---
 
@@ -210,7 +198,7 @@ NRB Advisor:
 
 Built for Bangladesh, scalable to all emerging markets with festival-driven, mobile-first, COD-heavy economies: **Pakistan, Indonesia, Nigeria, Egypt, Vietnam.**
 
-This expansion is sanity-checked by our NRB advisor (see §9A), so each pattern we generalise from the Bangladesh market is pressure-tested against on-the-ground experience in at least one comparable economy before it ships.
+Each pattern we generalise from the Bangladesh market is meant to be pressure-tested against on-the-ground experience in a comparable economy before it ships. Securing an NRB advisor (see §9A) to do that pressure-testing is an open, honest gap rather than something we claim today.
 
 ---
 

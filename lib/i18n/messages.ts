@@ -52,6 +52,7 @@ const en: Dict = {
   "home.d.onboarding": "Khata-to-Cloud: turn CSVs, PDFs and invoices into a live dashboard.",
   "home.d.developer": "Versioned REST API — push your data in, pull DokanAI's analyses out.",
   "home.d.uploads": "A full history of every import, ready to re-run any time.",
+  "home.d.install": "Install DokanAI to your phone's home screen — opens like a native app, works offline.",
   "home.spotlights.kicker": "How it works",
   "home.sp.forecast.title": "See the festival rush before it hits",
   "home.sp.forecast.desc": "DokanAI overlays Eid, Puja and Pohela Boishakh onto a 30-day demand curve, so you pre-stock the right items — never sold out, never overstocked.",
@@ -335,6 +336,29 @@ const en: Dict = {
   "ch.action.coupon": "Send coupon",
   "ch.action.thank": "Thank you",
   "ch.action.upsell": "Upsell",
+  "home.story.kicker": "A DokanAI Story",
+  "home.story.title": "Meet Rahim.",
+  "home.story.sub": "A 31-second cinematic — why a shopkeeper in Dhaka needs an AI partner.",
+
+  "ch.email.title": "Send email",
+  "ch.email.unknownName": "this customer",
+  "ch.email.toLabel": "Recipient",
+  "ch.email.toPlaceholder": "name@example.com",
+  "ch.email.subjectLabel": "Subject",
+  "ch.email.bodyLabel": "Message",
+  "ch.email.send": "Send now",
+  "ch.email.cancel": "Cancel",
+  "ch.email.close": "Close",
+  "ch.email.sentOk": "Sent — your customer will receive it within a minute.",
+  "ch.email.sentTo": "Delivered to",
+  "ch.email.providerId": "Resend message ID:",
+  "ch.email.noEmailOnFile": "No email on file for this customer — type one in above to send.",
+  "ch.email.errSubject": "Subject is required.",
+  "ch.email.errBody": "Message body is required.",
+  "ch.email.errTo": "Recipient email is required.",
+  "ch.email.errNotConfigured": "Email provider isn't configured yet on this deployment. Set RESEND_API_KEY + FROM_EMAIL on Vercel and redeploy.",
+  "ch.email.errInvalidRecipient": "That recipient email looks malformed.",
+  "ch.email.errGeneric": "Couldn't send the email. Please try again.",
 
   // voice
   // Voice now lives inside Pilot (see app/[locale]/dashboard/agent/PilotVoiceMic.tsx).
@@ -670,6 +694,14 @@ const en: Dict = {
   "ob.pdf.errAnalyze": "AI extraction failed. Please try again.",
   "ob.pdf.errImport": "Couldn't save the extracted data.",
   "ob.pdf.imported": "Shop data imported from PDF.",
+  "ob.pdf.productsTitle": "Products PDF",
+  "ob.pdf.productsHint": "Your catalogue / price list. Don't worry if it also has some sales rows — the AI will sort them.",
+  "ob.pdf.productsDropTitle": "Drop your products PDF",
+  "ob.pdf.salesTitle": "Sales PDF",
+  "ob.pdf.salesHint": "Your sales ledger / invoices. If it also has product rows, the AI will pick them out.",
+  "ob.pdf.salesDropTitle": "Drop your sales PDF",
+  "ob.pdf.splitNote": "Upload one or both. We extract text from both files and the AI organises everything for you — even if the PDFs aren't perfectly split.",
+  "ob.pdf.errAtLeastOne": "Choose at least one PDF first.",
 
   "nodata.title": "No shop data yet",
   "nodata.body": "Import your products and sales to unlock forecasts, pricing, recommendations, customer insights and more.",
@@ -787,6 +819,33 @@ const en: Dict = {
   "analyze.isTrending": "trending now",
   "analyze.showAll": "Show all",
   "analyze.showLess": "Show less",
+
+  // public plans page nav label (page copy itself uses the plans.* keys)
+  "plans.nav": "Pricing",
+
+  // subscription (dashboard Stripe checkout)
+  "nav.subscription": "Subscription",
+  "sub.title": "Subscription",
+  "sub.subtitle": "Choose a plan and pay securely with Stripe. Test mode — no real charge is made.",
+  "sub.upgrade": "Upgrade",
+  "sub.processing": "Redirecting…",
+  "sub.current": "Current plan",
+  "sub.success": "Payment successful. Your subscription is active in test mode.",
+  "sub.cancel": "Checkout cancelled. No charge was made.",
+  "sub.testNote": "Sandbox mode: use Stripe test card 4242 4242 4242 4242 with any future expiry, any CVC and any ZIP. No real money moves.",
+
+  // trust / responsible AI + model quality
+  "nav.trust": "Trust & Safety",
+  "trust.title": "Trust & Model Quality",
+  "trust.subtitle": "Measurable model metrics and a fairness audit of your AI outputs.",
+  "trust.modelsTitle": "Model quality",
+  "trust.biasTitle": "Fairness audit",
+  "trust.biasEmpty": "Not enough customer data yet to audit for representation bias.",
+  "trust.loading": "Running the audit…",
+  "trust.group": "Group",
+  "trust.population": "Share of base",
+  "trust.selected": "Share selected",
+  "trust.ratio": "Representation",
 };
 
 const bn: Dict = {
@@ -835,6 +894,7 @@ const bn: Dict = {
   "home.d.onboarding": "খাতা-টু-ক্লাউড: CSV, PDF ও ইনভয়েস থেকে লাইভ ড্যাশবোর্ড।",
   "home.d.developer": "ভার্সনড REST API — ডেটা পাঠান, DokanAI-র অ্যানালাইসিস টেনে নিন।",
   "home.d.uploads": "প্রতিটি ইম্পোর্টের পূর্ণ ইতিহাস, যেকোনো সময় আবার চালান।",
+  "home.d.install": "DokanAI আপনার ফোনের হোম স্ক্রিনে ইনস্টল করুন — অ্যাপের মতো খুলবে, অফলাইনেও কাজ করবে।",
   "home.spotlights.kicker": "যেভাবে কাজ করে",
   "home.sp.forecast.title": "উৎসবের ভিড় আসার আগেই দেখুন",
   "home.sp.forecast.desc": "DokanAI ঈদ, পূজা ও পহেলা বৈশাখকে ৩০-দিনের চাহিদা বক্ররেখায় বসায়, যাতে আপনি সঠিক পণ্য আগে থেকেই মজুত করেন — কখনো স্টক-আউট নয়, কখনো অতিরিক্ত নয়।",
@@ -1106,6 +1166,29 @@ const bn: Dict = {
   "ch.action.coupon": "কুপন পাঠান",
   "ch.action.thank": "ধন্যবাদ",
   "ch.action.upsell": "আপসেল",
+  "home.story.kicker": "একটি DokanAI গল্প",
+  "home.story.title": "পরিচয় — রহিম।",
+  "home.story.sub": "৩১ সেকেন্ডের একটা গল্প — কেন ঢাকার একজন দোকানদারের AI পার্টনার দরকার।",
+
+  "ch.email.title": "ইমেল পাঠান",
+  "ch.email.unknownName": "এই কাস্টমার",
+  "ch.email.toLabel": "প্রাপক",
+  "ch.email.toPlaceholder": "name@example.com",
+  "ch.email.subjectLabel": "সাবজেক্ট",
+  "ch.email.bodyLabel": "বার্তা",
+  "ch.email.send": "এখন পাঠান",
+  "ch.email.cancel": "বাতিল",
+  "ch.email.close": "বন্ধ",
+  "ch.email.sentOk": "পাঠানো হয়েছে — আপনার কাস্টমার এক মিনিটের মধ্যে পেয়ে যাবেন।",
+  "ch.email.sentTo": "পাঠানো হয়েছে",
+  "ch.email.providerId": "Resend মেসেজ আইডি:",
+  "ch.email.noEmailOnFile": "এই কাস্টমারের কোনো ইমেল সংরক্ষিত নাই — পাঠাতে উপরে একটি লিখুন।",
+  "ch.email.errSubject": "সাবজেক্ট দিতে হবে।",
+  "ch.email.errBody": "বার্তা লিখতে হবে।",
+  "ch.email.errTo": "প্রাপকের ইমেল দিতে হবে।",
+  "ch.email.errNotConfigured": "এই ডিপ্লয়মেন্টে ইমেল প্রোভাইডার সেট নাই। Vercel-এ RESEND_API_KEY + FROM_EMAIL সেট করে রিডিপ্লয় করুন।",
+  "ch.email.errInvalidRecipient": "প্রাপকের ইমেল ফরম্যাট ভুল মনে হচ্ছে।",
+  "ch.email.errGeneric": "ইমেল পাঠানো যায়নি। আবার চেষ্টা করুন।",
 
   "voice.tap": "কথা বলুন",
   "voice.listening": "শুনছি…",
@@ -1435,6 +1518,14 @@ const bn: Dict = {
   "ob.pdf.errAnalyze": "AI পড়তে পারেনি। আবার চেষ্টা করুন।",
   "ob.pdf.errImport": "ডেটা সেভ করা যায়নি।",
   "ob.pdf.imported": "PDF থেকে শপ ডেটা ইম্পোর্ট হয়েছে।",
+  "ob.pdf.productsTitle": "প্রোডাক্ট PDF",
+  "ob.pdf.productsHint": "আপনার ক্যাটালগ / প্রাইস লিস্ট। কিছু সেলস ডেটা মিশে থাকলেও AI আলাদা করে নেবে।",
+  "ob.pdf.productsDropTitle": "প্রোডাক্ট PDF এখানে drop করুন",
+  "ob.pdf.salesTitle": "সেলস PDF",
+  "ob.pdf.salesHint": "আপনার সেলস লেজার / ইনভয়েস। প্রোডাক্ট ডেটা মিশে থাকলেও AI সেগুলো আলাদা করে নেবে।",
+  "ob.pdf.salesDropTitle": "সেলস PDF এখানে drop করুন",
+  "ob.pdf.splitNote": "একটা অথবা দুটোই আপলোড করুন। আমরা দুটো ফাইল থেকেই টেক্সট নিই এবং AI সব গুছিয়ে দেয় — PDF পুরোপুরি গোছানো না থাকলেও কাজ হয়।",
+  "ob.pdf.errAtLeastOne": "প্রথমে অন্তত একটি PDF বাছুন।",
 
   "nodata.title": "এখনও কোনো শপ ডেটা নেই",
   "nodata.body": "ফোরকাস্ট, প্রাইসিং, রেকমেন্ডেশন, কাস্টমার ইনসাইট দেখতে আপনার পণ্য ও বিক্রির তথ্য ইম্পোর্ট করুন।",
@@ -1550,6 +1641,33 @@ const bn: Dict = {
   "analyze.isTrending": "এখন ট্রেন্ডিং",
   "analyze.showAll": "সব দেখুন",
   "analyze.showLess": "কম দেখুন",
+
+  // public plans page nav label (page copy itself uses the plans.* keys)
+  "plans.nav": "মূল্য",
+
+  // subscription (dashboard Stripe checkout)
+  "nav.subscription": "সাবস্ক্রিপশন",
+  "sub.title": "সাবস্ক্রিপশন",
+  "sub.subtitle": "একটি প্ল্যান বেছে নিন এবং Stripe দিয়ে নিরাপদে পেমেন্ট করুন। টেস্ট মোড — আসল চার্জ হয় না।",
+  "sub.upgrade": "আপগ্রেড",
+  "sub.processing": "রিডাইরেক্ট হচ্ছে…",
+  "sub.current": "বর্তমান প্ল্যান",
+  "sub.success": "পেমেন্ট সফল। টেস্ট মোডে আপনার সাবস্ক্রিপশন সক্রিয়।",
+  "sub.cancel": "চেকআউট বাতিল হয়েছে। কোনো চার্জ হয়নি।",
+  "sub.testNote": "স্যান্ডবক্স মোড: Stripe টেস্ট কার্ড 4242 4242 4242 4242, যেকোনো ভবিষ্যৎ মেয়াদ, যেকোনো CVC ও ZIP ব্যবহার করুন। আসল টাকা যায় না।",
+
+  // trust / responsible AI + model quality
+  "nav.trust": "ট্রাস্ট ও সেফটি",
+  "trust.title": "ট্রাস্ট ও মডেল কোয়ালিটি",
+  "trust.subtitle": "পরিমাপযোগ্য মডেল মেট্রিক এবং আপনার AI আউটপুটের ফেয়ারনেস অডিট।",
+  "trust.modelsTitle": "মডেল কোয়ালিটি",
+  "trust.biasTitle": "ফেয়ারনেস অডিট",
+  "trust.biasEmpty": "রিপ্রেজেন্টেশন বায়াস অডিটের জন্য এখনো যথেষ্ট গ্রাহক ডেটা নেই।",
+  "trust.loading": "অডিট চলছে…",
+  "trust.group": "গ্রুপ",
+  "trust.population": "বেইসের অংশ",
+  "trust.selected": "নির্বাচিত অংশ",
+  "trust.ratio": "রিপ্রেজেন্টেশন",
 };
 
 const dictionaries: Record<Locale, Dict> = { en, bn };

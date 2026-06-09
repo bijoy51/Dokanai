@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { extractFromImages, extractFromPdf } from "@/lib/import/extract";
+import { extractFromImages, extractFromMultiplePdfs, extractFromPdf } from "@/lib/import/extract";
 
 /**
  * POST /api/import/extract
@@ -74,18 +74,54 @@ export async function POST(req: Request) {
     }
 
     // mode === "pdf"
-    const file = form.get("file");
-    if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Attach a PDF file." }, { status: 400 });
+    // Accept three shapes (backwards-compatible):
+    //   1) `file`                       — legacy single-PDF path
+    //   2) `productsFile`               — new dual-upload, only products
+    //   3) `salesFile`                  — new dual-upload, only sales
+    //   4) `productsFile`+`salesFile`   — new dual-upload, both
+    // The dual path passes both PDFs to the model in a single call so it
+    // can de-duplicate product names referenced across the two files.
+    const legacy = form.get("file");
+    const productsFile = form.get("productsFile");
+    const salesFile = form.get("salesFile");
+
+    const collected: Array<{ label: string; file: File }> = [];
+    if (productsFile instanceof File && productsFile.size > 0) {
+      collected.push({ label: "PRODUCTS PDF (hinted by user)", file: productsFile });
     }
-    if (file.size > MAX_BYTES) {
+    if (salesFile instanceof File && salesFile.size > 0) {
+      collected.push({ label: "SALES PDF (hinted by user)", file: salesFile });
+    }
+    if (legacy instanceof File && legacy.size > 0 && collected.length === 0) {
+      collected.push({ label: "PDF", file: legacy });
+    }
+
+    if (collected.length === 0) {
+      return NextResponse.json({ error: "Attach at least one PDF file." }, { status: 400 });
+    }
+
+    const combined = collected.reduce((s, c) => s + c.file.size, 0);
+    if (combined > MAX_BYTES) {
       return NextResponse.json(
-        { error: `PDF is ${(file.size / 1_000_000).toFixed(1)} MB. Limit is ${(MAX_BYTES / 1_000_000).toFixed(1)} MB.` },
+        { error: `Combined PDF size is ${(combined / 1_000_000).toFixed(1)} MB. Limit is ${(MAX_BYTES / 1_000_000).toFixed(1)} MB.` },
         { status: 413 },
       );
     }
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const out = await extractFromPdf(bytes);
+
+    if (collected.length === 1) {
+      // Single PDF — use the existing path; identical behaviour to before.
+      const bytes = new Uint8Array(await collected[0].file.arrayBuffer());
+      const out = await extractFromPdf(bytes);
+      return NextResponse.json(out);
+    }
+
+    const sources = await Promise.all(
+      collected.map(async (c) => ({
+        label: c.label,
+        bytes: new Uint8Array(await c.file.arrayBuffer()),
+      })),
+    );
+    const out = await extractFromMultiplePdfs(sources);
     return NextResponse.json(out);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Extraction failed.";

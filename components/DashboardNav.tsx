@@ -6,8 +6,10 @@ import {
   BarChart3,
   Bot,
   Code2,
+  CreditCard,
   Download,
   LayoutDashboard,
+  ShieldCheck,
   TrendingUp,
   Tag,
   Sparkles,
@@ -40,9 +42,11 @@ const LINKS: Array<{ key: string; href: string; icon: typeof LayoutDashboard }> 
   { key: "nav.marketing", href: "/dashboard/marketing", icon: Megaphone },
   { key: "nav.customers", href: "/dashboard/customers", icon: Users },
   { key: "nav.rto", href: "/dashboard/rto", icon: ShieldAlert },
+  { key: "nav.trust", href: "/dashboard/trust", icon: ShieldCheck },
   { key: "nav.uploads", href: "/dashboard/uploads", icon: History },
   { key: "nav.onboarding", href: "/dashboard/onboarding", icon: UploadCloud },
   { key: "nav.developer", href: "/dashboard/developer", icon: Code2 },
+  { key: "nav.subscription", href: "/dashboard/subscription", icon: CreditCard },
   { key: "nav.install", href: "/dashboard/install", icon: Download },
 ];
 

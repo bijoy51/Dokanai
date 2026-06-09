@@ -13,6 +13,10 @@ import { rfmScores, segmentBreakdown, type Segment } from "@/lib/ai/churn";
 import { pendingCodRisks, rtoSummaryProjection } from "@/lib/ai/rto";
 import { priceRecommendations, bundleRecommendations } from "@/lib/ai/pricing";
 import { recommendForCustomer, customerSummaries } from "@/lib/ai/recommend";
+import { affinityRecommendations } from "@/lib/ai/affinity-graph";
+import { retrieveForQuestion } from "@/lib/ai/knowledge-graph";
+import { autopilotPlan } from "@/lib/ai/autopilot";
+import { hasTier } from "@/lib/subscription";
 import { predictChurnForCustomer } from "@/lib/ai/churn-ml";
 import { forecastAll, dailyForecastTotal } from "@/lib/ai/forecast";
 import {
@@ -132,6 +136,85 @@ export const TOOLS: Tool[] = [
     run: (args) => {
       const a = args as { customer_id: string; limit?: number };
       return recommendForCustomer(a.customer_id, limit(a.limit, 6, 20));
+    },
+  },
+  {
+    name: "list_affinity_recommendations",
+    description:
+      "Graph-based 'frequently bought together' recommendations. Builds a product co-purchase graph from the shop's orders (edges weighted by how often two products are bought in the same order, normalised to a Jaccard affinity) and returns the products most strongly linked to a given product, or to everything a given customer has bought. Use this for 'what goes with X?', 'what to cross-sell with X', or graph-style 'customers who bought X also bought' questions. Pass either product (name or id) OR customer_id.",
+    parameters: {
+      type: "object",
+      properties: {
+        product: { type: "string", description: "Seed product name (English or Bangla) or product id." },
+        customer_id: { type: "string", description: "Seed from this customer's whole purchase history instead of a single product." },
+        limit: { type: "number", description: "Max recommendations to return (default 6, max 20)." },
+      },
+      additionalProperties: false,
+    },
+    run: (args) => {
+      const a = args as { product?: string; customer_id?: string; limit?: number };
+      const res = affinityRecommendations({
+        productName: a.product,
+        customerId: a.customer_id,
+        k: limit(a.limit, 6, 20),
+      });
+      return {
+        method: "co-purchase affinity graph (Jaccard-weighted, 1-hop traversal)",
+        seeds: res.seeds.map((p) => ({ id: p.id, name: p.name })),
+        recommendations: res.recommendations.map((r) => ({
+          product: r.product.name,
+          product_id: r.product.id,
+          affinity_score: r.score,
+          co_purchases: r.coPurchases,
+          frequently_bought_with: r.via,
+        })),
+      };
+    },
+  },
+  {
+    name: "query_shop_graph",
+    description:
+      "GraphRAG retrieval over the shop's knowledge graph. Builds a typed graph (products, customers, categories, cities, festivals) from real orders and returns the relevant subgraph as relationship triples for a natural-language question. Use this for multi-hop / relational questions like 'what to bundle for Eid for saree buyers', 'what is connected to product X', 'which products and customers are affected if X runs out'. After calling it, ANSWER USING ONLY the returned relationships — do not invent links.",
+    parameters: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "The user's natural-language question to ground in the graph." },
+      },
+      required: ["question"],
+      additionalProperties: false,
+    },
+    run: (args) => {
+      const q = String((args as { question?: string }).question ?? "");
+      const sub = retrieveForQuestion(q);
+      return {
+        method: "knowledge-graph subgraph retrieval (GraphRAG)",
+        seeds: sub.seeds,
+        node_count: sub.nodeCount,
+        edge_count: sub.edgeCount,
+        relationships: sub.triples,
+        instruction: "Answer the user using ONLY these relationships. Do not invent links or numbers.",
+      };
+    },
+  },
+  {
+    name: "run_autopilot",
+    description:
+      "Autopilot: scan the shop and propose a prioritised action plan (restock, win-back, RTO guard) the owner can approve. Read-only — it never sends or orders on its own. Premium (Growth+) capability: free accounts get a preview of the top action only.",
+    parameters: { type: "object", properties: {}, additionalProperties: false },
+    run: async (_args, ctx) => {
+      const plan = autopilotPlan();
+      const allowed = await hasTier(ctx.email, "growth");
+      if (!allowed) {
+        return {
+          locked: true,
+          required_tier: "growth",
+          total_actions: plan.actions.length,
+          preview: plan.actions.slice(0, 1),
+          message:
+            "Autopilot is a Growth feature. Tell the user to upgrade on the Subscription page to unlock the full plan; show the single preview action.",
+        };
+      }
+      return { locked: false, ...plan };
     },
   },
   {

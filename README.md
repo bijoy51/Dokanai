@@ -75,7 +75,7 @@ Live: **https://dokanai.vercel.app**
 | Web app (UI + API routes) | Next.js 14, App Router, TypeScript, Tailwind, Recharts | **Vercel** — `dokanai.vercel.app` |
 | AI agent backend | OpenAI Chat Completions API (`gpt-4o-mini`) with function calling | OpenAI |
 | ML backend (analyze, classify, trends, shared KV) | FastAPI, Python 3.11, PyTorch | **Hugging Face Spaces** — `bijoynayemhasan-dokanai-ml.hf.space` |
-| Durable storage | In‑memory Python `dict` exposed as `/kv/{key}` on the HF Space | HF Space container |
+| Durable storage | Neon Postgres — single `kv (key, value jsonb)` table via [lib/kv.ts](lib/kv.ts); legacy HF Space `dict` kept as a read‑only lazy‑migration fallback | Neon (Vercel Marketplace) |
 | Transactional email | Resend HTTP API | Resend |
 | Scheduling | External cron job (yours) hitting `/api/cron/run-due-campaigns` | Anywhere |
 | Voice STT/TTS | Web Speech API (browser‑native) | Browser |
@@ -92,7 +92,7 @@ Live: **https://dokanai.vercel.app**
 |---|---|---|---|---|
 | 1 | Demand forecast (festival‑aware) | `/dashboard/forecast` | uses store | [lib/ai/forecast.ts](lib/ai/forecast.ts) |
 | 2 | Pricing & bundles | `/dashboard/pricing` | — | [lib/ai/pricing.ts](lib/ai/pricing.ts) |
-| 3 | Recommendations (item‑to‑item) | `/dashboard/recommendations` | `/api/recommend` | [lib/ai/recommend.ts](lib/ai/recommend.ts) |
+| 3 | Recommendations (item‑to‑item + graph affinity) | `/dashboard/recommendations` | `/api/recommend` | [lib/ai/recommend.ts](lib/ai/recommend.ts), [lib/ai/affinity-graph.ts](lib/ai/affinity-graph.ts) |
 | 4 | Auto‑marketing (drafts + smart timing) | `/dashboard/marketing` | `/api/marketing` | [lib/ai/marketing.ts](lib/ai/marketing.ts), [lib/ai/timing.ts](lib/ai/timing.ts) |
 | 5 | Customer churn (RFM) | `/dashboard/customers` | — | [lib/ai/churn.ts](lib/ai/churn.ts) |
 | 6 | Bangla voice co‑pilot | `/dashboard/voice` | `/api/voice-query` | [lib/ai/voice-query.ts](lib/ai/voice-query.ts) |
@@ -290,7 +290,8 @@ docker-compose.yml      one-command local stack (web + ml-backend)
 | Customers | `list_customers_by_segment` | At‑risk / VIP / dormant / loyal / new (RFM) |
 | Customers | `get_segment_breakdown` | Counts per segment |
 | Customers | `list_top_customers` | Top by lifetime spend |
-| Customers | `list_recommendations_for_customer` | Per‑customer next‑best products |
+| Customers | `list_recommendations_for_customer` | Per‑customer next‑best products (cosine item‑to‑item) |
+| Customers | `list_affinity_recommendations` | Graph‑based "frequently bought together" — co‑purchase affinity graph (Jaccard‑weighted, 1‑hop traversal) from a seed product or a customer's history ([lib/ai/affinity-graph.ts](lib/ai/affinity-graph.ts)) |
 | Products | `list_top_products` | Top by units sold (last 60 d) |
 | Products | `list_low_stock` | Sorted by days‑of‑stock |
 | Pricing | `list_pricing_suggestions` | Raise / lower / hold with rationale |
@@ -570,7 +571,7 @@ The original product + technical plans are kept in this repo for reference:
 
 DokanAI is shaped by people, not just code.
 
-- **NRB Advisor (Non-Resident Bangladeshi e-commerce / AI mentor).** Documented in §9A of [DokanAI-Plan.md](DokanAI-Plan.md#9a-nrb-advisor--global-advisory). The verification step before any commit greps for `FILL:` tokens; any leftover placeholder in that section blocks merge.
+- **NRB Advisor — seat open, not yet filled.** We have not secured a Non-Resident Bangladeshi advisor as of this submission and do not claim one. See §9A of [DokanAI-Plan.md](DokanAI-Plan.md#9a-nrb-advisor--global-advisory).
 - **Pilot SME partners.** Three Bangladeshi shopkeepers providing real, anonymised sales data so our forecasts and RTO models are calibrated against ground truth rather than synthetic seeds. (Names withheld for their privacy unless they opt in to be listed.)
 - **Open-source.** Next.js, Tailwind, lucide-react, react-markdown, Recharts, FastAPI, scikit-learn, XGBoost, SHAP, ONNX Runtime, and the Resend / Hugging Face / Vercel free tiers that make a two-person team's hackathon submission feasible.
 - **The Infinity AI BuildFest 2026 organisers** at BRAC University for the platform, the timeline, and the rubric we're building against.

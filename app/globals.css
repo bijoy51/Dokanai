@@ -17,6 +17,15 @@ html,
 body {
   background: rgb(var(--background));
   color: rgb(var(--foreground));
+  /* Hard safety net: keep the document from ever scrolling sideways on
+     phones. Individual sections still use `overflow-x-hidden` on their own
+     containers, but a stray decoration / animated blob bleeding past the
+     viewport edge shouldn't unlock document-level horizontal scroll. */
+  overflow-x: hidden;
+  /* Long Bangla words (no native hyphenation) or URL-ish strings shouldn't
+     force a min-content wider than the viewport. */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 body {
