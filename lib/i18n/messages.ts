@@ -607,6 +607,9 @@ const en: Dict = {
   "dev.revoke": "Revoke",
   "dev.confirmRevoke": "Revoke this key? Any code using it stops working immediately. Other keys are unaffected.",
 
+  "dev.ex.postmanTitle": "Test in Postman",
+  "dev.ex.postmanDesc": "Download the collection, import it into Postman, then set the api_key variable to your key (base_url defaults to this site).",
+  "dev.ex.postmanBtn": "Download Postman collection",
   "dev.ex.endpointsTitle": "Endpoints",
   "dev.ex.descSync": "Push products + sales in one call",
   "dev.ex.descProducts": "Push products only",
@@ -1431,6 +1434,9 @@ const bn: Dict = {
   "dev.revoke": "Revoke",
   "dev.confirmRevoke": "এই key revoke করবেন? যে কোডে এটি ব্যবহার হচ্ছে সেটি সাথে সাথে বন্ধ হবে। অন্য key-গুলো প্রভাবিত হবে না।",
 
+  "dev.ex.postmanTitle": "Postman দিয়ে টেস্ট করুন",
+  "dev.ex.postmanDesc": "কালেকশনটি ডাউনলোড করে Postman-এ ইম্পোর্ট করুন, তারপর api_key ভেরিয়েবলে আপনার কী বসান (base_url ডিফল্টে এই সাইট)।",
+  "dev.ex.postmanBtn": "Postman কালেকশন ডাউনলোড",
   "dev.ex.endpointsTitle": "এন্ডপয়েন্ট",
   "dev.ex.descSync": "এক কলে products + sales পাঠান",
   "dev.ex.descProducts": "শুধু products পাঠান",

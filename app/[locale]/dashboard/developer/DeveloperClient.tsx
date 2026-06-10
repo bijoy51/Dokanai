@@ -9,6 +9,7 @@ import {
   Code2,
   Copy,
   Database,
+  Download,
   Gauge,
   Key as KeyIcon,
   Loader2,
@@ -379,6 +380,22 @@ console.log(forecast.top_movers.slice(0, 3));`,
 
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-brand-200 bg-brand-50/50 p-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-medium flex items-center gap-2">
+            <Zap className="w-4 h-4 text-brand-600" />
+            {t("dev.ex.postmanTitle", locale)}
+          </div>
+          <p className="text-xs text-slate-600 mt-1">{t("dev.ex.postmanDesc", locale)}</p>
+        </div>
+        <a
+          href="/dokanai-api.postman_collection.json"
+          download="dokanai-api.postman_collection.json"
+          className="inline-flex items-center gap-2 shrink-0 rounded-md bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 text-sm font-medium shadow-sm"
+        >
+          <Download className="w-4 h-4" /> {t("dev.ex.postmanBtn", locale)}
+        </a>
+      </div>
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <div className="text-sm font-medium mb-2">{t("dev.ex.endpointsTitle", locale)}</div>
         <ul className="text-xs text-slate-600 space-y-1 font-mono">

@@ -1,0 +1,214 @@
+{
+  "info": {
+    "_postman_id": "dokanai-developer-api-v1",
+    "name": "DokanAI Developer API (v1)",
+    "description": "Test the DokanAI Developer API in Postman.\n\nSetup:\n1. Import this collection.\n2. Open the collection's Variables tab and set `api_key` to your key from Dashboard -> Developer API -> Keys (format `sk_live_...`).\n3. `base_url` defaults to https://dokanai.vercel.app — change it for local/staging.\n\nAuth: every request inherits collection-level Bearer auth (`Authorization: Bearer {{api_key}}`). Read endpoints need a key with the `read` scope; write endpoints need `write`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{api_key}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://dokanai.vercel.app", "type": "string" },
+    { "key": "api_key", "value": "sk_live_YOUR_API_KEY_HERE", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "health"]
+            },
+            "description": "Liveness + key/scope check. Returns ok and the resolved key's scopes."
+          }
+        },
+        {
+          "name": "Usage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/usage",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "usage"]
+            },
+            "description": "Current month's API call usage for your account."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data",
+      "item": [
+        {
+          "name": "Get products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/data/products?limit=200&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "data", "products"],
+              "query": [
+                { "key": "limit", "value": "200" },
+                { "key": "offset", "value": "0" }
+              ]
+            },
+            "description": "List your imported products (paginated)."
+          }
+        },
+        {
+          "name": "Push products",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"products\": [\n    { \"title\": \"Cotton Saree\", \"category\": \"clothing\", \"price\": 1500, \"cost\": 900, \"stock\": 20 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/data/products",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "data", "products"]
+            },
+            "description": "Upsert products into your shop (write scope)."
+          }
+        },
+        {
+          "name": "Get sales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/data/sales?limit=500&offset=0",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "data", "sales"],
+              "query": [
+                { "key": "limit", "value": "500" },
+                { "key": "offset", "value": "0" },
+                { "key": "since", "value": "2026-01-01", "disabled": true }
+              ]
+            },
+            "description": "List your sales rows. Optional `since=YYYY-MM-DD` (inclusive)."
+          }
+        },
+        {
+          "name": "Push sales",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sales\": [\n    { \"date\": \"2026-06-06\", \"product\": \"Cotton Saree\", \"qty\": 1, \"unit_price\": 1500, \"customer\": \"Bijoy\", \"city\": \"Dhaka\", \"payment\": \"cod\", \"status\": \"delivered\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/data/sales",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "data", "sales"]
+            },
+            "description": "Append sales rows (write scope)."
+          }
+        },
+        {
+          "name": "Sync (products + sales)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"products\": [\n    { \"title\": \"Cotton Saree\", \"category\": \"clothing\", \"price\": 1500, \"stock\": 20 }\n  ],\n  \"sales\": [\n    { \"date\": \"2026-06-06\", \"product\": \"Cotton Saree\", \"qty\": 1, \"unit_price\": 1500, \"city\": \"Dhaka\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/data/sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "data", "sync"]
+            },
+            "description": "Idempotent bulk upsert of products and/or sales in one call (write scope)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Insights",
+      "item": [
+        {
+          "name": "Demand forecast",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/insights/forecast",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "insights", "forecast"]
+            },
+            "description": "Festival-aware demand forecast (XGBoost)."
+          }
+        },
+        {
+          "name": "Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/insights/recommendations?limit=20&k=6",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "insights", "recommendations"],
+              "query": [
+                { "key": "limit", "value": "20" },
+                { "key": "k", "value": "6" }
+              ]
+            },
+            "description": "Per-customer product recommendations."
+          }
+        },
+        {
+          "name": "RTO risk",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/insights/rto",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "insights", "rto"]
+            },
+            "description": "Pending COD orders ranked by return-to-origin risk."
+          }
+        },
+        {
+          "name": "Popular items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/insights/popular",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "insights", "popular"]
+            },
+            "description": "Top-selling / trending items for your shop."
+          }
+        },
+        {
+          "name": "Festival outlook",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/insights/festivals",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "insights", "festivals"]
+            },
+            "description": "Upcoming festivals with expected demand uplift by category."
+          }
+        }
+      ]
+    }
+  ]
+}
