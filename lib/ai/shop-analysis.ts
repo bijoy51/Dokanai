@@ -132,6 +132,30 @@ const OCCASIONS: Record<string, string[]> = {
   winter: ["winter", "warm", "woolen"],
 };
 
+// When the title/description doesn't state gender or occasion explicitly, infer
+// a sensible default from the garment type so the extracted-catalog table isn't
+// mostly blank. Text matches always take priority over these defaults.
+const GENDER_BY_GARMENT: Record<string, string> = {
+  saree: "women",
+  kurti: "women",
+  blouse: "women",
+  hijab: "women",
+  "three-piece": "women",
+  panjabi: "men",
+};
+const OCCASION_BY_GARMENT: Record<string, string> = {
+  saree: "festive",
+  "three-piece": "festive",
+  blouse: "festive",
+  dress: "festive",
+  kurti: "casual",
+  shirt: "casual",
+  pant: "casual",
+  hijab: "daily",
+  jacket: "winter",
+  shawl: "winter",
+};
+
 function extractAttributes(l: AnalyzeShopRequest["listings"][number]): CatalogItem {
   const text = `${l.title ?? ""} ${l.description ?? ""}`.toLowerCase();
   const find = (table: Record<string, string[]>) => {
@@ -139,13 +163,16 @@ function extractAttributes(l: AnalyzeShopRequest["listings"][number]): CatalogIt
     return null;
   };
   const garment = find(GARMENTS);
-  const occasion = find(OCCASIONS);
+  let occasion = find(OCCASIONS);
   const color = COLORS.find((c) => new RegExp(`\\b${c}\\b`).test(text)) ?? null;
   const material = MATERIALS.find((m) => text.includes(m)) ?? null;
   let gender: string | null = null;
   if (/\b(women|ladies|girl|woman|female)\b/.test(text)) gender = "women";
   else if (/\b(men|gents|boy|man|male)\b/.test(text)) gender = "men";
   else if (/\b(kids|child|baby|boys|girls)\b/.test(text)) gender = "kids";
+  // Fall back to garment-based inference when the text didn't say.
+  if (!gender && garment) gender = GENDER_BY_GARMENT[garment] ?? null;
+  if (!occasion && garment) occasion = OCCASION_BY_GARMENT[garment] ?? null;
   const sizeMatch = text.match(/\b(xxl|xl|xs|s|m|l)\b/i) ?? text.match(/size\s*[:\-]?\s*(\d{1,2})/i);
   const size = sizeMatch ? (sizeMatch[1] ?? "").toUpperCase() || null : null;
   const price = typeof l.price === "number" ? l.price : null;
@@ -278,7 +305,13 @@ function forecastFromInputs(
     days_of_stock: Math.round(Math.min(r.days_of_stock, 365) * 10) / 10,
   }));
 
-  const restock = rows.filter((r) => r.days_of_stock < 10 && r.forecast_7d > 0).sort((a, b) => a.days_of_stock - b.days_of_stock).slice(0, 8);
+  // Flag anything about to run out (low days of stock with forecast demand) OR
+  // anything already at zero stock — an out-of-stock sellable item is the most
+  // urgent restock, so it must never be silently dropped.
+  const restock = rows
+    .filter((r) => (r.days_of_stock < 10 && r.forecast_7d > 0) || r.stock === 0)
+    .sort((a, b) => a.days_of_stock - b.days_of_stock)
+    .slice(0, 8);
   const restock_soon: RestockItem[] = restock.map((r) => ({
     product_type: r.product_type,
     days_of_stock: Math.round(r.days_of_stock * 10) / 10,
@@ -458,6 +491,48 @@ function seasonalTrends(shopType: string): { up: TrendItem[]; down: TrendItem[] 
   return { up, down };
 }
 
+/**
+ * Trends scoped to the shop's own category. A clothing shop that also sold a
+ * few LED bulbs or chickpeas should NOT see those in "Trending now" — they are
+ * cross-category noise. We map each sold product to a category (the listing's
+ * own category when present, else inferred from its type) and keep only those
+ * matching the detected shop type before computing momentum.
+ */
+export function trendsScopedToShop(
+  shopType: string,
+  listings: AnalyzeShopRequest["listings"],
+  sales: AnalyzeShopRequest["sales"] | undefined,
+): { up: TrendItem[]; down: TrendItem[] } {
+  if (!sales?.length) return seasonalTrends(shopType);
+  const catOf = new Map<string, string>();
+  for (const l of listings) {
+    if (!l.title) continue;
+    const cat =
+      typeof l.category === "string" && l.category
+        ? l.category.toLowerCase()
+        : boostCategory(extractAttributes(l).product_type, shopType);
+    catOf.set(l.title.trim().toLowerCase(), cat);
+  }
+  const scoped = sales.filter((s) => catOf.get((s.product || "").trim().toLowerCase()) === shopType);
+  if (!scoped.length) return seasonalTrends(shopType);
+  return trendsFromSales(shopType, scoped);
+}
+
+// ---------- exported derivations (used by /api/analyze-shop to override the
+// ML backend's catalog / restock / trending with shop-specific results) ----------
+
+export function deriveCatalog(listings: AnalyzeShopRequest["listings"]): CatalogItem[] {
+  return listings.map(extractAttributes);
+}
+
+export function deriveRestock(
+  listings: AnalyzeShopRequest["listings"],
+  sales: NonNullable<AnalyzeShopRequest["sales"]>,
+  shopType: string,
+): RestockItem[] {
+  return forecastFromInputs(listings, listings.map(extractAttributes), sales, shopType).restock_soon;
+}
+
 // ---------- popular styles ----------
 //
 // Earlier versions of this section showed a hard-coded archetype list keyed by
@@ -486,7 +561,10 @@ const TYPE_TO_LIBRARY: Array<[string, string]> = [
   ["tunic", "Tunics"],
   ["t-shirt", "Tshirts"],
   ["tshirt", "Tshirts"],
-  ["polo", "Tshirts"],
+  // Polo is a collared shirt — keep it in the Shirts library, NOT Tshirts.
+  // When both shared "Tshirts", the per-card photo rotation swapped a polo
+  // photo onto the "Graphic T-Shirt" card and vice-versa.
+  ["polo", "Shirts"],
   ["shirt", "Shirts"],
   ["jeans", "Jeans"],
   ["trouser", "Trousers"],
@@ -791,7 +869,7 @@ export function analyzeShopStub(req: AnalyzeShopRequest): AnalyzeShopResponse {
   const catalog = listings.map(extractAttributes);
   const { selling_well, selling_poorly, restock_soon } = forecastFromInputs(listings, catalog, sales, shop_type.label);
   const missing_goods = missingGoodsFor(shop_type.label, catalog);
-  const trending = sales.length ? trendsFromSales(shop_type.label, sales) : seasonalTrends(shop_type.label);
+  const trending = trendsScopedToShop(shop_type.label, listings, sales);
   const festival_outlook = festivalOutlook();
   // Derive for ALL shop types — grocery, electronics, pharmacy, etc. The
   // image library only carries fashion / beauty / accessories, so those

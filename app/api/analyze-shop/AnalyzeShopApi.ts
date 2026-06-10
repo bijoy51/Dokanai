@@ -5,6 +5,9 @@ import { hydrateImported } from "@/lib/data/imported";
 import {
   analyzeShopStub,
   derivePopularStylesFromCatalog,
+  deriveCatalog,
+  deriveRestock,
+  trendsScopedToShop,
   type AnalyzeShopRequest,
   type AnalyzeShopResponse,
 } from "@/lib/ai/shop-analysis";
@@ -100,6 +103,11 @@ export async function POST(req: Request) {
       // identical for every clothing shop. Override it with a shop-specific
       // derivation so the cards reflect THIS shop's catalog and sales.
       overridePopularStyles(json, payload, base);
+      // The ML backend's catalog (attributes), restock_soon and trending have
+      // known gaps (blank attributes, out-of-stock items missing from restock,
+      // cross-category items in trending). Recompute them from this shop's data
+      // so they are correct + consistent with the Pilot's numbers.
+      overrideShopInsights(json, payload);
       return NextResponse.json(json);
     } catch (err) {
       const stub = analyzeShopStub(payload);
@@ -147,4 +155,21 @@ function overridePopularStyles(
     payload.sales,
     imageBaseUrl,
   );
+}
+
+/**
+ * Override the ML backend's catalog / restock_soon / trending with derivations
+ * from THIS shop's listings + sales. Fixes three reported bugs:
+ *   - extracted-catalog attributes were mostly blank (now inferred),
+ *   - out-of-stock products were missing from "Restock soon",
+ *   - "Trending now" surfaced cross-category items (e.g. an LED bulb in a
+ *     clothing shop) — now scoped to the detected shop type.
+ * Only runs when we actually have listings; leaves selling_well/poorly intact.
+ */
+function overrideShopInsights(resp: AnalyzeShopResponse, payload: AnalyzeShopRequest): void {
+  if (!payload.listings?.length) return;
+  const shopType = resp.shop_type?.label || "clothing";
+  resp.catalog = deriveCatalog(payload.listings);
+  resp.restock_soon = deriveRestock(payload.listings, payload.sales ?? [], shopType);
+  resp.trending = trendsScopedToShop(shopType, payload.listings, payload.sales);
 }
