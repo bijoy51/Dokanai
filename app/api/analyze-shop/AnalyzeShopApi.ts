@@ -7,6 +7,7 @@ import {
   derivePopularStylesFromCatalog,
   deriveCatalog,
   deriveRestock,
+  deriveSelling,
   trendsScopedToShop,
   type AnalyzeShopRequest,
   type AnalyzeShopResponse,
@@ -169,7 +170,14 @@ function overridePopularStyles(
 function overrideShopInsights(resp: AnalyzeShopResponse, payload: AnalyzeShopRequest): void {
   if (!payload.listings?.length) return;
   const shopType = resp.shop_type?.label || "clothing";
+  const sales = payload.sales ?? [];
   resp.catalog = deriveCatalog(payload.listings);
-  resp.restock_soon = deriveRestock(payload.listings, payload.sales ?? [], shopType);
+  resp.restock_soon = deriveRestock(payload.listings, sales, shopType);
   resp.trending = trendsScopedToShop(shopType, payload.listings, payload.sales);
+  // Selling-well / Slow-movers: recompute from real product names + 30-day
+  // units so the rows are unique and match the Forecast page (the backend's
+  // version collapsed products to generic types with 0 units).
+  const { selling_well, selling_poorly } = deriveSelling(payload.listings, sales, shopType);
+  resp.selling_well = selling_well;
+  resp.selling_poorly = selling_poorly;
 }

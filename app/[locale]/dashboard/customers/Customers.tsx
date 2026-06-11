@@ -47,7 +47,9 @@ export default function CustomersPage({ params }: { params: { locale: string } }
     };
   });
 
-  const shopOwnerEmail = getSession()?.email ?? "";
+  const session = getSession();
+  const shopOwnerEmail = session?.email ?? "";
+  const shopOwnerName = session?.name ?? "";
 
   return (
     <div>
@@ -76,7 +78,7 @@ export default function CustomersPage({ params }: { params: { locale: string } }
         <div className="px-4 py-3 border-b border-slate-200 text-sm font-medium">
           Top customers (RFM scored)
         </div>
-        <CustomersTable rows={rows} locale={locale} shopOwnerEmail={shopOwnerEmail} />
+        <CustomersTable rows={rows} locale={locale} shopOwnerEmail={shopOwnerEmail} shopOwnerName={shopOwnerName} />
       </section>
     </div>
   );

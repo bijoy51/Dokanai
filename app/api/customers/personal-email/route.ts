@@ -109,7 +109,8 @@ export async function POST(req: Request) {
 
   const url = new URL(req.url);
   const origin = process.env.APP_ORIGIN?.trim() || `${url.protocol}//${url.host}`;
-  const shopName = session.email.split("@")[0] || "Your shop";
+  // Use the account's shop/display name ("Fashion Nest"), not the email prefix.
+  const shopName = session.name?.trim() || session.email.split("@")[0] || "Your shop";
 
   const rendered = renderCampaignEmail({
     subject,

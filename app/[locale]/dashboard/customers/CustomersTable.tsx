@@ -61,10 +61,12 @@ export function CustomersTable({
   rows,
   locale,
   shopOwnerEmail,
+  shopOwnerName,
 }: {
   rows: CustomersTableRow[];
   locale: Locale;
   shopOwnerEmail: string;
+  shopOwnerName?: string;
 }) {
   const [target, setTarget] = useState<PersonalEmailTarget | null>(null);
 
@@ -130,6 +132,7 @@ export function CustomersTable({
         locale={locale}
         target={target}
         shopOwnerEmail={shopOwnerEmail}
+        shopOwnerName={shopOwnerName}
         onClose={() => setTarget(null)}
       />
     </>

@@ -279,7 +279,12 @@ function forecastFromInputs(
     const stock = typeof l.stock === "number" ? l.stock : null;
     const daysOfStock = stock !== null ? stock / dailyFwd : 999;
     return {
-      product_type: catalog[i]?.product_type ?? l.category ?? l.title,
+      // Label with the real product title (e.g. "Striped Polo Shirt"), not the
+      // generic garment type ("shirt"). The generic type collapsed many
+      // distinct products into duplicate rows ("Saree" x3, a bare "Silk") in
+      // Selling-well / Slow-movers; the full title is unique and matches what
+      // the Forecast page shows.
+      product_type: l.title ?? catalog[i]?.product_type ?? l.category,
       units_30d: u30,
       units_prior_30d: uPrior,
       forecast_7d: fc7,
@@ -533,6 +538,20 @@ export function deriveRestock(
   return forecastFromInputs(listings, listings.map(extractAttributes), sales, shopType).restock_soon;
 }
 
+export function deriveSelling(
+  listings: AnalyzeShopRequest["listings"],
+  sales: NonNullable<AnalyzeShopRequest["sales"]>,
+  shopType: string,
+): { selling_well: SellingItem[]; selling_poorly: PoorItem[] } {
+  const { selling_well, selling_poorly } = forecastFromInputs(
+    listings,
+    listings.map(extractAttributes),
+    sales,
+    shopType,
+  );
+  return { selling_well, selling_poorly };
+}
+
 // ---------- popular styles ----------
 //
 // Earlier versions of this section showed a hard-coded archetype list keyed by
@@ -561,10 +580,12 @@ const TYPE_TO_LIBRARY: Array<[string, string]> = [
   ["tunic", "Tunics"],
   ["t-shirt", "Tshirts"],
   ["tshirt", "Tshirts"],
-  // Polo is a collared shirt — keep it in the Shirts library, NOT Tshirts.
-  // When both shared "Tshirts", the per-card photo rotation swapped a polo
-  // photo onto the "Graphic T-Shirt" card and vice-versa.
-  ["polo", "Shirts"],
+  // Polo gets its own library (the grey polo photo the dataset had mislabeled
+  // under "Tshirts"). Keeping it separate stops the photo rotation from
+  // putting a polo on the "Graphic T-Shirt" card and a plain shirt on the
+  // "Polo Shirt" card. "polo" must stay ABOVE "shirt" so "Polo Shirt" matches
+  // here first.
+  ["polo", "Polos"],
   ["shirt", "Shirts"],
   ["jeans", "Jeans"],
   ["trouser", "Trousers"],

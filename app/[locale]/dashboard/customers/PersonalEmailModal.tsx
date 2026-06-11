@@ -106,15 +106,19 @@ export function PersonalEmailModal({
   locale,
   target,
   shopOwnerEmail,
+  shopOwnerName,
   onClose,
 }: {
   locale: Locale;
   target: PersonalEmailTarget | null;
   shopOwnerEmail: string | undefined;
+  shopOwnerName?: string;
   onClose: () => void;
 }) {
   const templates = locale === "bn" ? TEMPLATES_BN : TEMPLATES_EN;
-  const shopName = shopNameFromEmail(shopOwnerEmail);
+  // Prefer the real shop / account display name ("Fashion Nest"); fall back to
+  // the email prefix only when no name is set.
+  const shopName = (shopOwnerName && shopOwnerName.trim()) || shopNameFromEmail(shopOwnerEmail);
 
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");

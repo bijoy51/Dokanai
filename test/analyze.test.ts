@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveCatalog, deriveRestock, trendsScopedToShop } from "@/lib/ai/shop-analysis";
+import { deriveCatalog, deriveRestock, deriveSelling, trendsScopedToShop } from "@/lib/ai/shop-analysis";
 
 const daysAgo = (n: number) => {
   const d = new Date();
@@ -31,6 +31,29 @@ describe("analyze: restock flags out-of-stock (Fix 2)", () => {
       "clothing",
     );
     expect(restock.some((r) => /saree/i.test(r.product_type))).toBe(true);
+  });
+});
+
+describe("analyze: selling-well uses real names + real units (Fix)", () => {
+  const listings = [
+    { title: "Striped Polo Shirt", price: 900, stock: 10, category: "clothing" },
+    { title: "Silk Saree Red", price: 3000, stock: 5, category: "clothing" },
+  ];
+  const sales = [
+    { date: daysAgo(3), product: "Striped Polo Shirt", qty: 4, unit_price: 900 },
+    { date: daysAgo(3), product: "Silk Saree Red", qty: 2, unit_price: 3000 },
+  ];
+  const { selling_well } = deriveSelling(listings, sales, "clothing");
+  const labels = selling_well.map((s) => s.product_type);
+
+  it("labels rows with full product titles, not generic garment types", () => {
+    expect(labels).toContain("Striped Polo Shirt");
+    expect(labels).not.toContain("shirt");
+    expect(labels).not.toContain("saree");
+  });
+  it("reports real 30-day units (not zero) for recently sold items", () => {
+    const polo = selling_well.find((s) => s.product_type === "Striped Polo Shirt");
+    expect(polo?.units_30d).toBe(4);
   });
 });
 
